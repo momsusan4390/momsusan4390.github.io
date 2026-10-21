@@ -15,6 +15,9 @@
     status: "판매상태",
     photo: "대표사진",
     notes: "안내사항",
+    supply: "공급가",
+    sale: "판매가",
+    discount: "할인율",
   };
   const SPECIAL_KEYS = new Set(Object.values(COL));
   const CATEGORY_ORDER = ["냉장", "냉동", "건어물"];
@@ -240,6 +243,7 @@
       ? el("span", { className: "badge" + (soldOut ? " warn" : ""), textContent: status })
       : null;
 
+    const price = renderPrice(item);
     const notes = get(item, COL.notes);
     const imgSrc = toImageUrl(get(item, COL.photo));
     const img = imgSrc
@@ -250,6 +254,7 @@
       img,
       el("div", { className: "card-body" }, [
         el("div", { className: "card-head" }, [el("h3", { textContent: get(item, COL.name) || "(상품명 없음)" }), badge]),
+        price,
         fields.childElementCount ? fields : null,
         notes ? el("p", { className: "notes", textContent: notes }) : null,
         links.childElementCount ? links : null,
@@ -258,6 +263,42 @@
     card.dataset.name = get(item, COL.name);
     card.addEventListener("click", () => recordView(item));
     return card;
+  }
+
+  // ---------- 가격 표기 ----------
+  // 공급가: 회색 + 취소선 / 할인율: 빨간색, 판매가 앞 / 판매가: 크게
+  // 할인율 칸이 비어 있으면 공급가·판매가로 계산. 판매가가 없으면 공급가를 본 가격으로 표시
+
+  const toNumber = (v) => {
+    const n = parseInt(String(v || "").replace(/[^\d]/g, ""), 10);
+    return Number.isNaN(n) ? null : n;
+  };
+  const won = (n) => `${n.toLocaleString("ko-KR")}원`;
+
+  function priceInfo(item) {
+    const supply = toNumber(get(item, COL.supply));
+    const sale = toNumber(get(item, COL.sale));
+    const main = sale ?? supply;
+    const original = sale !== null && supply !== null && supply > sale ? supply : null;
+
+    let discount = get(item, COL.discount).trim();
+    if (discount && !discount.includes("%")) discount += "%";
+    if (!discount && original) discount = `${Math.round(((original - sale) / original) * 100)}%`;
+    if (!original && !get(item, COL.discount).trim()) discount = "";
+
+    return { main, original, discount };
+  }
+
+  function renderPrice(item) {
+    const { main, original, discount } = priceInfo(item);
+    if (main === null) return null;
+    return el("div", { className: "price" }, [
+      original ? el("del", { className: "price-original", textContent: won(original) }) : null,
+      el("div", { className: "price-now" }, [
+        discount ? el("span", { className: "price-discount", textContent: discount }) : null,
+        el("strong", { className: "price-sale", textContent: won(main) }),
+      ]),
+    ]);
   }
 
   // ---------- 최근 본 상품 (이 브라우저에만 저장) ----------
@@ -285,7 +326,7 @@
     $("recent-list").replaceChildren(...recent.map((item) => {
       const btn = el("button", { type: "button" }, [
         el("span", { className: "recent-name", textContent: get(item, COL.name) }),
-        el("span", { className: "recent-meta", textContent: [get(item, "공급가"), get(item, COL.status)].filter(Boolean).join(" · ") }),
+        el("span", { className: "recent-meta", textContent: [priceOf(item) !== null && won(priceOf(item)), get(item, COL.status)].filter(Boolean).join(" · ") }),
       ]);
       btn.addEventListener("click", () => goToItem(get(item, COL.name)));
       return el("li", {}, btn);
@@ -358,12 +399,9 @@
 
   // ---------- 정렬 (분류 그룹 안에서 적용) ----------
   // 신상품: "등록일" 열이 있으면 그 날짜 최신순, 없으면 시트 아래쪽(나중에 추가한 행)이 먼저
-  // 가격: 공급가의 숫자만 사용. 공급가가 비어 있으면 맨 뒤
+  // 가격: 화면에 크게 보이는 가격(판매가, 없으면 공급가) 기준. 둘 다 비어 있으면 맨 뒤
 
-  const priceOf = (item) => {
-    const n = parseInt(get(item, "공급가").replace(/[^\d]/g, ""), 10);
-    return Number.isNaN(n) ? null : n;
-  };
+  const priceOf = (item) => priceInfo(item).main;
   const byName = (a, b) => get(a, COL.name).localeCompare(get(b, COL.name), "ko");
   const byNewest = (a, b) =>
     get(b, "등록일").localeCompare(get(a, "등록일")) ||
