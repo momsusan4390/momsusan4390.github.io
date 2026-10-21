@@ -24,7 +24,11 @@
   const SOLD_OUT = "품절";
 
   const $ = (id) => document.getElementById(id);
-  const state = { items: [], category: ALL, query: "", sort: "name", rowIndex: new Map() };
+  // 보기 방식: grid(바둑판, 간단 정보) | detail(자세히, 모든 정보). 방문자 브라우저에 기억
+  const VIEW_KEY = "momsusan:view";
+  const loadView = () => { try { return localStorage.getItem(VIEW_KEY) === "detail" ? "detail" : "grid"; } catch { return "grid"; } };
+
+  const state = { items: [], category: ALL, query: "", sort: "name", view: loadView(), rowIndex: new Map() };
 
   const normalizeKey = (key) => key.replace(/\s+/g, "");
   const isSpecial = (key) => SPECIAL_KEYS.has(normalizeKey(key));
@@ -228,7 +232,8 @@
 
   // ---------- 상품 시트 ----------
 
-  function renderCard(item) {
+  // inModal: 상세 창 안에 그릴 때 (클릭 시 다시 창을 열지 않음)
+  function renderCard(item, { inModal = false } = {}) {
     const fields = el("dl", { className: "fields" });
     const links = el("div", { className: "links" });
     const status = get(item, COL.status);
@@ -264,9 +269,41 @@
         links.childElementCount ? links : null,
       ]),
     ]);
+    if (inModal) return card;
     card.dataset.name = get(item, COL.name);
-    card.addEventListener("click", () => recordView(item));
+    // 바둑판: 카드를 누르면 상세 창 / 자세히: 이미 다 보이므로 최근 본 상품에만 기록
+    card.addEventListener("click", () => (state.view === "grid" ? openDetail(item) : recordView(item)));
     return card;
+  }
+
+  // ---------- 상품 상세 창 ----------
+
+  function openDetail(item) {
+    $("detail-body").replaceChildren(renderCard(item, { inModal: true }));
+    $("recent-panel").hidden = true;
+    const dlg = $("detail");
+    if (!dlg.open) dlg.showModal();
+    dlg.scrollTop = 0;
+    document.documentElement.classList.add("modal-open");
+    recordView(item);
+  }
+
+  function initDetail() {
+    const dlg = $("detail");
+    $("detail-close").addEventListener("click", () => dlg.close());
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); }); // 바깥(어두운 영역) 클릭
+    dlg.addEventListener("close", () => document.documentElement.classList.remove("modal-open"));
+  }
+
+  // ---------- 보기 전환 ----------
+
+  function setView(view) {
+    state.view = view;
+    try { localStorage.setItem(VIEW_KEY, view); } catch { /* 저장 불가 브라우저는 무시 */ }
+    for (const btn of document.querySelectorAll("[data-view]")) {
+      btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
+    }
+    $("list").className = `view-${view}`;
   }
 
   // ---------- 가격 표기 ----------
@@ -342,8 +379,13 @@
     $("recent-count").hidden = recent.length === 0;
   }
 
-  // 목록에서 해당 상품 카드로 이동 (필터·검색에 가려져 있으면 해제)
+  // 바둑판 보기: 상세 창으로 열기 / 자세히 보기: 목록의 해당 카드로 이동 (필터·검색에 가려져 있으면 해제)
   function goToItem(name) {
+    if (state.view === "grid") {
+      const item = state.items.find((i) => get(i, COL.name) === name);
+      if (item) openDetail(item);
+      return;
+    }
     const find = () => [...document.querySelectorAll(".card")].find((c) => c.dataset.name === name);
     if (!find()) {
       state.category = ALL;
@@ -446,9 +488,10 @@
     $("list").replaceChildren(...[...groups].map(([cat, items]) =>
       el("section", { className: "group" }, [
         el("h2", { textContent: `${cat} (${items.length})` }),
-        el("div", { className: "grid" }, items.map(renderCard)),
+        el("div", { className: "grid" }, items.map((item) => renderCard(item))),
       ])
     ));
+    $("count").textContent = `총 ${filtered.length}개`;
     $("status").textContent = filtered.length ? "" : "조건에 맞는 품목이 없습니다.";
   }
 
@@ -457,6 +500,11 @@
   async function init() {
     $("search").addEventListener("input", (e) => { state.query = e.target.value.trim(); renderList(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderList(); });
+    for (const btn of document.querySelectorAll("[data-view]")) {
+      btn.addEventListener("click", () => setView(btn.dataset.view));
+    }
+    setView(state.view);
+    initDetail();
     initFab();
     setKakao(CONFIG.kakaoUrl);
 

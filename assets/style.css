@@ -100,8 +100,25 @@ body {
   background: #fff;
   font: inherit;
 }
-.filter-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
-.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; flex: 1; min-width: 0; }
+.chips { display: flex; gap: 6px; overflow-x: auto; margin-top: 10px; padding-bottom: 4px; }
+.list-controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
+.count { color: var(--muted); font-size: 13px; }
+.controls { display: flex; align-items: center; gap: 6px; }
+.view-toggle { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 4px; }
+.view-toggle button {
+  width: 36px;
+  height: 32px;
+  border: 0;
+  background: #fff;
+  color: #b0b0b0;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+.view-toggle button + button { border-left: 1px solid var(--line); }
+.view-toggle button[aria-pressed="true"] { color: var(--ink); background: var(--soft); }
+.view-toggle svg { width: 16px; height: 16px; fill: currentColor; }
 .sort {
   flex: none;
   margin-bottom: 4px;
@@ -317,3 +334,48 @@ body {
 .price-discount { color: #e0321c; font-size: 18px; font-weight: 800; }
 .price-sale { color: var(--ink); font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
 .card.sold-out .price-discount, .card.sold-out .price-sale { color: var(--muted); }
+
+/* ---------- 바둑판 보기: 사진·상품명·판매상태·가격만 ---------- */
+.view-grid .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+@media (min-width: 700px) { .view-grid .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; } }
+.view-grid .card .fields,
+.view-grid .card .notes,
+.view-grid .card .links { display: none; }
+.view-grid .card-body { padding: 10px 12px 12px; gap: 4px; }
+.view-grid .card-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+.view-grid .card h3 { font-size: 15px; line-height: 1.35; }
+.view-grid .badge { font-size: 11px; padding: 2px 6px; }
+.view-grid .price-original { font-size: 12px; }
+.view-grid .price-now { gap: 4px; flex-wrap: wrap; }
+.view-grid .price-discount { font-size: 15px; }
+.view-grid .price-sale { font-size: 16px; }
+.view-grid .img-empty { font-size: 12px; }
+
+/* ---------- 상품 상세 창 ---------- */
+.modal-open { overflow: hidden; }
+.detail {
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.detail::backdrop { background: rgba(0, 0, 0, .5); }
+.detail .card { border: 0; border-radius: 0; cursor: default; }
+.detail-close {
+  position: sticky;
+  top: 8px;
+  float: right;
+  margin: 8px 8px -48px 0;
+  z-index: 1;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
+  font-size: 16px;
+  cursor: pointer;
+}
