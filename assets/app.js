@@ -21,7 +21,7 @@
   const SOLD_OUT = "품절";
 
   const $ = (id) => document.getElementById(id);
-  const state = { items: [], category: ALL, query: "" };
+  const state = { items: [], category: ALL, query: "", sort: "name", rowIndex: new Map() };
 
   const normalizeKey = (key) => key.replace(/\s+/g, "");
   const isSpecial = (key) => SPECIAL_KEYS.has(normalizeKey(key));
@@ -242,6 +242,31 @@
     chips.hidden = categories().length <= 2;
   }
 
+  // ---------- 정렬 (분류 그룹 안에서 적용) ----------
+  // 신상품: "등록일" 열이 있으면 그 날짜 최신순, 없으면 시트 아래쪽(나중에 추가한 행)이 먼저
+  // 가격: 공급가의 숫자만 사용. 공급가가 비어 있으면 맨 뒤
+
+  const priceOf = (item) => {
+    const n = parseInt(get(item, "공급가").replace(/[^\d]/g, ""), 10);
+    return Number.isNaN(n) ? null : n;
+  };
+  const byName = (a, b) => get(a, COL.name).localeCompare(get(b, COL.name), "ko");
+  const byNewest = (a, b) =>
+    get(b, "등록일").localeCompare(get(a, "등록일")) ||
+    state.rowIndex.get(b) - state.rowIndex.get(a);
+  const byPrice = (dir) => (a, b) => {
+    const pa = priceOf(a), pb = priceOf(b);
+    if (pa === null || pb === null) return (pa === null) - (pb === null);
+    return (pa - pb) * dir || byName(a, b);
+  };
+
+  const SORTS = {
+    name: byName,
+    new: byNewest,
+    priceAsc: byPrice(1),
+    priceDesc: byPrice(-1),
+  };
+
   function renderList() {
     const q = state.query.toLowerCase();
     const filtered = state.items.filter((item) =>
@@ -251,7 +276,10 @@
 
     const groups = new Map(categories().slice(1).map((c) => [c, []]));
     for (const item of filtered) groups.get(categoryOf(item)).push(item);
-    for (const [cat, items] of groups) if (!items.length) groups.delete(cat);
+    for (const [cat, items] of groups) {
+      if (items.length) items.sort(SORTS[state.sort]);
+      else groups.delete(cat);
+    }
 
     $("list").replaceChildren(...[...groups].map(([cat, items]) =>
       el("section", { className: "group" }, [
@@ -266,6 +294,7 @@
 
   async function init() {
     $("search").addEventListener("input", (e) => { state.query = e.target.value.trim(); renderList(); });
+    $("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderList(); });
 
     // 공지사항·안내 탭은 없어도 상품은 표시된다
     const [itemsResult, noticesResult, infoResult] = await Promise.allSettled([
@@ -283,6 +312,7 @@
       return;
     }
     state.items = itemsResult.value.filter(isVisible);
+    state.items.forEach((item, i) => state.rowIndex.set(item, i));
     renderChips();
     renderList();
   }

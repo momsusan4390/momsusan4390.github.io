@@ -9,12 +9,12 @@
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <meta property="og:title" content="엄마수산">
   <meta property="og:image" content="assets/img/logo.png">
-  <link rel="stylesheet" href="assets/style.css?v=202610211837">
+  <link rel="stylesheet" href="assets/style.css?v=202610211849">
 </head>
 <body>
   <header class="hero">
     <div class="wrap">
-      <h1 class="logo"><img src="assets/img/logo.png?v=202610211837" alt="엄마수산" width="800" height="800"></h1>
+      <h1 class="logo"><img src="assets/img/logo.png?v=202610211849" alt="엄마수산" width="800" height="800"></h1>
       <p class="eyebrow" id="updated"></p>
       <p class="intro" id="intro"></p>
       <div class="hero-actions" id="hero-actions"></div>
@@ -30,7 +30,15 @@
 
     <div class="toolbar">
       <input type="search" id="search" placeholder="상품명·원산지 검색" aria-label="상품 검색">
-      <div class="chips" id="chips" role="tablist" aria-label="카테고리"></div>
+      <div class="filter-row">
+        <div class="chips" id="chips" role="tablist" aria-label="카테고리"></div>
+        <select id="sort" class="sort" aria-label="정렬">
+          <option value="name">상품명순</option>
+          <option value="new">신상품순</option>
+          <option value="priceAsc">낮은가격순</option>
+          <option value="priceDesc">높은가격순</option>
+        </select>
+      </div>
     </div>
 
     <p class="status" id="status">불러오는 중…</p>
@@ -39,7 +47,7 @@
 
   <footer class="wrap footer" id="footer"></footer>
 
-  <script src="config.js?v=202610211837"></script>
-  <script src="assets/app.js?v=202610211837"></script>
+  <script src="config.js?v=202610211849"></script>
+  <script src="assets/app.js?v=202610211849"></script>
 </body>
 </html>
