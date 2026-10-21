@@ -171,7 +171,8 @@
   }
 
   // 노출 열은 선택. 없거나 비어 있으면 노출 (상품·공지 공통)
-  const HIDDEN_VALUES = ["N", "X", "숨김", "비노출", "게시중단", "중단"];
+  // 노출 열을 체크박스로 바꿔도 동작하도록 FALSE(체크 해제)도 숨김 처리
+  const HIDDEN_VALUES = ["N", "X", "FALSE", "숨김", "비노출", "게시중단", "중단"];
   function isVisible(row) {
     return !HIDDEN_VALUES.includes(normalizeKey(get(row, COL.visible)).toUpperCase());
   }
@@ -181,7 +182,8 @@
   // 중요=Y 가 맨 위, 그다음 등록일 최신순. 첫 공지만 펼쳐서 보여준다.
 
   const NOTICE_PREVIEW = 3;
-  const isYes = (v) => ["Y", "O", "중요"].includes(v.toUpperCase());
+  // 체크박스는 TRUE/FALSE 로 들어온다
+  const isYes = (v) => ["Y", "O", "TRUE", "중요"].includes(v.trim().toUpperCase());
 
   function renderNotices(rows) {
     const notices = rows
