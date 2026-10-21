@@ -1,0 +1,75 @@
+# 개발실 표준 .gitignore 템플릿
+# 각 프로젝트 루트에 .gitignore로 복사 후 프로젝트 고유 항목 추가
+
+# === 환경변수 · 시크릿 (최우선 차단) ===
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+.env.test
+*.env
+secrets.env
+.secrets
+*.pem
+*.key
+*.p12
+*.pfx
+# .env.example은 커밋 허용 (더미값만)
+!.env.example
+
+# === 의존성 ===
+node_modules/
+.pnp
+.pnp.js
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# === 빌드 산출물 ===
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# === 로그·캐시 ===
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+.turbo/
+.parcel-cache/
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === DB 로컬 파일 (설치형 프로젝트 제외) ===
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# === Claude Code 개인 설정 ===
+.claude/settings.local.json
+# .claude/settings.json 는 커밋 허용
+
+# === 테스트 커버리지 ===
+coverage/
+.nyc_output/
+
+# === 엄마네농수산: 퍼블릭 배포 제외 (내부 문서) ===
+CLAUDE.md
+SECURITY_STATUS.md
+docs/
+*.xlsx
