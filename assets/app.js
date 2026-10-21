@@ -348,6 +348,10 @@
     priceDesc: byPrice(-1),
   };
 
+  // 품절 상품은 판매중 상품 뒤로. 판매중·품절 각각 안에서는 선택한 정렬 적용
+  const isSoldOut = (item) => get(item, COL.status).includes(SOLD_OUT);
+  const withSoldOutLast = (compare) => (a, b) => isSoldOut(a) - isSoldOut(b) || compare(a, b);
+
   function renderList() {
     const q = state.query.toLowerCase();
     const filtered = state.items.filter((item) =>
@@ -358,7 +362,7 @@
     const groups = new Map(categories().slice(1).map((c) => [c, []]));
     for (const item of filtered) groups.get(categoryOf(item)).push(item);
     for (const [cat, items] of groups) {
-      if (items.length) items.sort(SORTS[state.sort]);
+      if (items.length) items.sort(withSoldOutLast(SORTS[state.sort]));
       else groups.delete(cat);
     }
 
