@@ -130,9 +130,23 @@
       if (href) actions.append(externalLink(key, href));
     }
 
-    if (info["연락처"]) {
-      $("footer").append(`문의 ${info["연락처"]}`);
-    }
+    renderFooter(info);
+  }
+
+  // ---------- 하단 (안내 탭 기반) ----------
+  // 안내 탭의 항목 중 상단·문의 버튼에서 쓰는 것(소개·기준일·링크)을 뺀 나머지를 "항목 : 내용"으로 나열.
+  // 대표자·사업자등록번호·주소·이메일 등은 시트에 행만 추가하면 자동 표시
+  const FOOTER_SKIP = new Set(["업체명", "소개", "기준일", "카카오톡"]);
+
+  function renderFooter(info) {
+    const name = info["업체명"] || "엄마수산";
+    const rows = Object.entries(info).filter(([k, v]) => v && !FOOTER_SKIP.has(normalizeKey(k)) && !safeUrl(v));
+
+    $("footer-name").textContent = name;
+    $("footer-info").replaceChildren(...rows.map(([k, v]) =>
+      el("div", {}, [el("dt", { textContent: k }), el("dd", { textContent: v })])
+    ));
+    $("footer-copy").textContent = `© ${new Date().getFullYear()} ${name}. All rights reserved.`;
   }
 
   // 노출 열은 선택. 없거나 비어 있으면 노출 (상품·공지 공통)

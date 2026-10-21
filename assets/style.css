@@ -183,8 +183,21 @@ body {
   text-decoration: none;
 }
 
-.footer { color: var(--muted); font-size: 13px; padding-block: 40px calc(32px + env(safe-area-inset-bottom, 0px)); }
+.footer {
+  margin-top: 56px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  padding-block: 28px calc(32px + env(safe-area-inset-bottom, 0px));
+}
 .footer a { color: inherit; }
+.footer-logo { display: block; width: 32px; height: 32px; margin-bottom: 8px; }
+.footer-name { display: block; color: var(--ink); font-size: 14px; margin-bottom: 8px; }
+.footer-info { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.footer-info div { display: flex; gap: 6px; }
+.footer-info dt::after { content: " :"; }
+.footer-info dd { margin: 0; color: var(--ink); }
+.footer-copy { margin: 14px 0 0; font-size: 12px; }
 
 /* ---------- 우측 하단 고정 버튼 ---------- */
 .fab {
@@ -276,5 +289,7 @@ body {
   100% { box-shadow: 0 0 0 3px transparent; }
 }
 
-/* 고정 버튼이 맨 아래 내용을 가리지 않게 */
-.footer { padding-bottom: calc(200px + env(safe-area-inset-bottom, 0px)); }
+/* 고정 버튼(오른쪽 68px 폭)이 하단 글자를 가리지 않게 */
+@media (max-width: 1040px) {
+  .footer .wrap { padding-right: 84px; }
+}
