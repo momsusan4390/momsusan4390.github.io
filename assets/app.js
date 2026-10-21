@@ -24,9 +24,20 @@
   const SOLD_OUT = "품절";
 
   const $ = (id) => document.getElementById(id);
+
+  // 구형 브라우저 대비 (iOS 14 미만 등 카카오톡 인앱 포함)
+  if (!Element.prototype.replaceChildren) {
+    Element.prototype.replaceChildren = function (...nodes) { this.textContent = ""; this.append(...nodes); };
+  }
+  // <dialog> 미지원(iOS 15.4 미만)이면 상세 창 대신 "자세히" 보기만 사용
+  const SUPPORTS_DIALOG = typeof HTMLDialogElement === "function" && "showModal" in HTMLDialogElement.prototype;
+
   // 보기 방식: grid(바둑판, 간단 정보) | detail(자세히, 모든 정보). 방문자 브라우저에 기억
   const VIEW_KEY = "momsusan:view";
-  const loadView = () => { try { return localStorage.getItem(VIEW_KEY) === "detail" ? "detail" : "grid"; } catch { return "grid"; } };
+  const loadView = () => {
+    if (!SUPPORTS_DIALOG) return "detail";
+    try { return localStorage.getItem(VIEW_KEY) === "detail" ? "detail" : "grid"; } catch { return "grid"; }
+  };
 
   const state = { items: [], category: ALL, query: "", sort: "name", view: loadView(), rowIndex: new Map() };
 
@@ -57,11 +68,27 @@
     return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(SHEET_NAMES[kind])}`;
   }
 
+  // 탭마다 반드시 있어야 하는 열. 구글은 없는 탭 이름을 요청하면 오류 대신 첫 탭을 돌려주므로,
+  // 이 열이 없으면 "엉뚱한 탭"으로 보고 버린다 (예: 상품게시 탭 이름이 바뀌었을 때 공지가 상품으로 보이는 문제)
+  const REQUIRED_COLUMN = { items: "상품명", notices: "제목", info: "항목" };
+  const FETCH_TIMEOUT_MS = 10000;
+
   async function fetchCsv(kind) {
     const sheetName = SHEET_NAMES[kind];
-    const res = await fetch(sheetUrl(kind), { cache: "no-store" });
-    if (!res.ok) throw new Error(`${sheetName} 시트를 불러오지 못했습니다 (${res.status})`);
-    return parseCsv(await res.text());
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+    try {
+      const res = await fetch(sheetUrl(kind), { cache: "no-store", signal: ctrl.signal });
+      if (!res.ok) throw new Error(`${sheetName} 시트를 불러오지 못했습니다 (${res.status})`);
+      const rows = parseCsv(await res.text());
+      const required = REQUIRED_COLUMN[kind];
+      if (rows.length && !Object.keys(rows[0]).some((k) => normalizeKey(k) === required)) {
+        throw new Error(`${sheetName} 탭에 "${required}" 열이 없습니다 (탭 이름 확인 필요)`);
+      }
+      return rows;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // RFC 4180 CSV → 객체 배열 (첫 줄 = 헤더)
@@ -122,12 +149,14 @@
   // ---------- 안내 시트 ----------
 
   function renderInfo(rows) {
-    const info = Object.fromEntries(rows.map((r) => [r["항목"], r["내용"]]).filter(([k]) => k));
+    const info = Object.fromEntries(rows.map((r) => [get(r, "항목").trim(), get(r, "내용")]).filter(([k]) => k));
+    // 항목 이름도 띄어쓰기 무시 ("업체 명" = "업체명")
+    const infoGet = (name) => (Object.entries(info).find(([k]) => normalizeKey(k) === name) || [])[1] || "";
 
     // 상단 이름은 로고 이미지로 고정. 업체명은 브라우저 탭 제목에만 반영
-    if (info["업체명"]) document.title = info["업체명"];
-    $("intro").textContent = info["소개"] || "";
-    $("updated").textContent = info["기준일"] ? `${info["기준일"]} 기준` : "";
+    if (infoGet("업체명")) document.title = infoGet("업체명");
+    $("intro").textContent = infoGet("소개");
+    $("updated").textContent = infoGet("기준일") ? `${infoGet("기준일")} 기준` : "";
 
     // 값이 URL 인 항목은 상단 버튼으로
     const actions = $("hero-actions");
@@ -189,13 +218,19 @@
   // 체크박스는 TRUE/FALSE 로 들어온다
   const isYes = (v) => ["Y", "O", "TRUE", "중요"].includes(v.trim().toUpperCase());
 
+  // 날짜 → 20261021 같은 숫자 (2026-10-21, 2026. 10. 1, 2026/9/5 모두 인식). 못 읽으면 0
+  function dateKey(v) {
+    const m = String(v || "").match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    return m ? Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]) : 0;
+  }
+
   function renderNotices(rows) {
     const notices = rows
       .filter((r) => isVisible(r) && (get(r, "제목") || get(r, "내용")))
       .map((r, index) => ({ r, index }))
       .sort((a, b) =>
         isYes(get(b.r, "중요")) - isYes(get(a.r, "중요")) ||
-        get(b.r, "등록일").localeCompare(get(a.r, "등록일")) ||
+        dateKey(get(b.r, "등록일")) - dateKey(get(a.r, "등록일")) ||
         a.index - b.index
       )
       .map(({ r }) => r);
@@ -212,8 +247,8 @@
         get(r, "내용") ? el("p", { textContent: get(r, "내용") }) : null,
         href ? externalLink("자세히 보기", href) : null,
       ]);
-      const details = el("details", { open: i === 0, hidden: i >= NOTICE_PREVIEW }, [summary, body]);
-      return el("li", {}, details);
+      // 숨김은 li 에 걸어야 구분선(li + li 테두리)이 겹치지 않는다
+      return el("li", { hidden: i >= NOTICE_PREVIEW }, el("details", { open: i === 0 }, [summary, body]));
     });
 
     $("notice-list").replaceChildren(...items);
@@ -224,7 +259,7 @@
       more.textContent = `이전 공지 ${notices.length - NOTICE_PREVIEW}건 더보기`;
       more.hidden = false;
       more.addEventListener("click", () => {
-        items.forEach((li) => { li.firstChild.hidden = false; });
+        items.forEach((li) => { li.hidden = false; });
         more.hidden = true;
       }, { once: true });
     }
@@ -255,9 +290,12 @@
     const price = renderPrice(item);
     const notes = get(item, COL.notes);
     const imgSrc = toImageUrl(get(item, COL.photo));
+    const emptyPhoto = () => el("div", { className: "img-empty", textContent: "사진 준비중" });
     const img = imgSrc
       ? el("img", { src: imgSrc, alt: get(item, COL.name), loading: "lazy", referrerPolicy: "no-referrer" })
-      : el("div", { className: "img-empty", textContent: "사진 준비중" });
+      : emptyPhoto();
+    // 드라이브 공유 누락·잘못된 링크로 사진을 못 불러오면 깨진 아이콘 대신 "사진 준비중"
+    if (imgSrc) img.addEventListener("error", () => img.replaceWith(emptyPhoto()), { once: true });
 
     const card = el("article", { className: "card" + (soldOut ? " sold-out" : "") }, [
       img,
@@ -273,48 +311,77 @@
     card.dataset.name = get(item, COL.name);
     // 바둑판: 카드를 누르면 상세 창 / 자세히: 이미 다 보이므로 최근 본 상품에만 기록
     card.addEventListener("click", () => (state.view === "grid" ? openDetail(item) : recordView(item)));
+    if (state.view === "grid") {
+      // 키보드(Tab → Enter/Space)로도 상세 창을 열 수 있게
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", `${get(item, COL.name)} 자세히 보기`);
+      card.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(item); }
+      });
+    }
     return card;
   }
 
   // ---------- 상품 상세 창 ----------
 
+  let focusBeforeDetail = null;
+
   function openDetail(item) {
+    if (!SUPPORTS_DIALOG) return recordView(item);
     $("detail-body").replaceChildren(renderCard(item, { inModal: true }));
-    $("recent-panel").hidden = true;
+    setRecentOpen(false);
     const dlg = $("detail");
-    if (!dlg.open) dlg.showModal();
+    if (!dlg.open) {
+      focusBeforeDetail = document.activeElement;
+      dlg.showModal();
+    }
     dlg.scrollTop = 0;
     document.documentElement.classList.add("modal-open");
     recordView(item);
   }
 
   function initDetail() {
+    if (!SUPPORTS_DIALOG) return;
     const dlg = $("detail");
     $("detail-close").addEventListener("click", () => dlg.close());
     dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); }); // 바깥(어두운 영역) 클릭
-    dlg.addEventListener("close", () => document.documentElement.classList.remove("modal-open"));
+    dlg.addEventListener("close", () => {
+      document.documentElement.classList.remove("modal-open");
+      // 닫으면 열기 전 위치(누른 카드)로 포커스 복귀
+      if (focusBeforeDetail && document.contains(focusBeforeDetail)) focusBeforeDetail.focus();
+      focusBeforeDetail = null;
+    });
   }
 
   // ---------- 보기 전환 ----------
 
   function setView(view) {
-    state.view = view;
-    try { localStorage.setItem(VIEW_KEY, view); } catch { /* 저장 불가 브라우저는 무시 */ }
+    state.view = SUPPORTS_DIALOG ? view : "detail";
+    try { localStorage.setItem(VIEW_KEY, state.view); } catch { /* 저장 불가 브라우저는 무시 */ }
     for (const btn of document.querySelectorAll("[data-view]")) {
-      btn.setAttribute("aria-pressed", String(btn.dataset.view === view));
+      btn.setAttribute("aria-pressed", String(btn.dataset.view === state.view));
     }
-    $("list").className = `view-${view}`;
+    $("list").className = `view-${state.view}`;
+    // 카드의 키보드·역할 속성이 보기 방식마다 달라서 다시 그림
+    if (state.items.length) renderList();
   }
 
   // ---------- 가격 표기 ----------
   // 공급가: 회색 + 취소선 / 할인율: 빨간색, 판매가 앞 / 판매가: 크게
   // 할인율 칸이 비어 있으면 공급가·판매가로 계산. 판매가가 없으면 공급가를 본 가격으로 표시
 
-  const toNumber = (v) => {
-    const n = parseInt(String(v || "").replace(/[^\d]/g, ""), 10);
-    return Number.isNaN(n) ? null : n;
-  };
-  const won = (n) => `${n.toLocaleString("ko-KR")}원`;
+  // "₩21,000" "21000원" "2.1만원" "10.5%" → 숫자. 범위(1,000~2,000)·음수·0·알 수 없는 형식은 null
+  function toNumber(v) {
+    const s = String(v || "").replace(/[₩,원%\s]/g, "");
+    const m = s.match(/^(\d+(?:\.\d+)?)(만)?$/);
+    if (!m) return null;
+    const n = Number(m[1]) * (m[2] ? 10000 : 1);
+    return n > 0 ? n : null;
+  }
+  const won = (n) => `${Math.round(n).toLocaleString("ko-KR")}원`;
+  // 10 → "10%", 10.5 → "10.5%" (소수 첫째 자리까지)
+  const percent = (n) => `${Math.round(n * 10) / 10}%`;
 
   function priceInfo(item) {
     const supply = toNumber(get(item, COL.supply));
@@ -322,11 +389,13 @@
     const main = sale ?? supply;
     const original = sale !== null && supply !== null && supply > sale ? supply : null;
 
-    // 할인율은 실제 할인(판매가 < 공급가)일 때만 표시. 시트의 "0%" 등은 무시
+    // 할인율은 실제 할인(판매가 < 공급가)일 때만 표시. 시트 값이 0~100 사이가 아니면 자동 계산.
+    // 계산값이 반올림으로 0% 가 되면(아주 작은 할인) 표시하지 않음
     let discount = "";
     if (original) {
       const entered = toNumber(get(item, COL.discount));
-      discount = `${entered || Math.round(((original - sale) / original) * 100)}%`;
+      const rate = entered !== null && entered < 100 ? entered : Math.round(((original - sale) / original) * 100);
+      if (rate > 0) discount = percent(rate);
     }
 
     return { main, original, discount };
@@ -350,8 +419,12 @@
   const RECENT_KEY = "momsusan:recent";
   const RECENT_MAX = 10;
 
+  // 저장값이 손상돼도(배열 아님 등) 기능이 멈추지 않게 문자열 배열만 사용
   function loadRecent() {
-    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+    try {
+      const v = JSON.parse(localStorage.getItem(RECENT_KEY));
+      return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+    } catch { return []; }
   }
 
   function recordView(item) {
@@ -377,6 +450,7 @@
     $("recent-empty").hidden = recent.length > 0;
     $("recent-count").textContent = recent.length;
     $("recent-count").hidden = recent.length === 0;
+    $("fab-recent").setAttribute("aria-label", `최근 본 상품 ${recent.length}개`);
   }
 
   // 바둑판 보기: 상세 창으로 열기 / 자세히 보기: 목록의 해당 카드로 이동 (필터·검색에 가려져 있으면 해제)
@@ -396,8 +470,10 @@
     }
     const card = find();
     if (!card) return;
-    $("recent-panel").hidden = true;
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    setRecentOpen(false);
+    // 상단 고정 검색바 높이만큼 띄워서 카드 윗부분이 가려지지 않게
+    card.style.scrollMarginTop = `${document.querySelector(".toolbar").offsetHeight + 12}px`;
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
     card.classList.remove("flash");
     void card.offsetWidth; // 애니메이션 재시작
     card.classList.add("flash");
@@ -405,15 +481,21 @@
 
   // ---------- 우측 하단 고정 버튼 ----------
 
+  function setRecentOpen(open) {
+    $("recent-panel").hidden = !open;
+    $("fab-recent").setAttribute("aria-expanded", String(open));
+  }
+
   function initFab() {
     const panel = $("recent-panel");
     $("fab-recent").addEventListener("click", (e) => {
       e.stopPropagation();
-      panel.hidden = !panel.hidden;
+      setRecentOpen(panel.hidden);
     });
-    $("recent-close").addEventListener("click", () => { panel.hidden = true; });
+    $("recent-close").addEventListener("click", () => setRecentOpen(false));
     panel.addEventListener("click", (e) => e.stopPropagation());
-    document.addEventListener("click", () => { panel.hidden = true; });
+    document.addEventListener("click", () => setRecentOpen(false));
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !panel.hidden) setRecentOpen(false); });
 
     $("fab-top").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
   }
@@ -437,8 +519,7 @@
     const chips = $("chips");
     chips.replaceChildren(...categories().map((name) => {
       const btn = el("button", { type: "button", textContent: name });
-      btn.setAttribute("role", "tab");
-      btn.setAttribute("aria-selected", String(name === state.category));
+      btn.setAttribute("aria-pressed", String(name === state.category));
       btn.addEventListener("click", () => { state.category = name; renderChips(); renderList(); });
       return btn;
     }));
@@ -452,7 +533,7 @@
   const priceOf = (item) => priceInfo(item).main;
   const byName = (a, b) => get(a, COL.name).localeCompare(get(b, COL.name), "ko");
   const byNewest = (a, b) =>
-    get(b, "등록일").localeCompare(get(a, "등록일")) ||
+    dateKey(get(b, "등록일")) - dateKey(get(a, "등록일")) ||
     state.rowIndex.get(b) - state.rowIndex.get(a);
   const byPrice = (dir) => (a, b) => {
     const pa = priceOf(a), pb = priceOf(b);
@@ -471,11 +552,18 @@
   const isSoldOut = (item) => get(item, COL.status).includes(SOLD_OUT);
   const withSoldOutLast = (compare) => (a, b) => isSoldOut(a) - isSoldOut(b) || compare(a, b);
 
+  // 검색 대상: 화면에 글자로 보이는 값만 (사진·상세사진 등 링크 주소, 노출 열 제외)
+  const searchText = (item) =>
+    Object.entries(item)
+      .filter(([k, v]) => v && normalizeKey(k) !== COL.visible && !safeUrl(v))
+      .map(([, v]) => v.toLowerCase())
+      .join("\n");
+
   function renderList() {
     const q = state.query.toLowerCase();
     const filtered = state.items.filter((item) =>
       (state.category === ALL || categoryOf(item) === state.category) &&
-      (!q || Object.values(item).some((v) => v.toLowerCase().includes(q)))
+      (!q || searchText(item).includes(q))
     );
 
     const groups = new Map(categories().slice(1).map((c) => [c, []]));
@@ -503,6 +591,7 @@
     for (const btn of document.querySelectorAll("[data-view]")) {
       btn.addEventListener("click", () => setView(btn.dataset.view));
     }
+    if (!SUPPORTS_DIALOG) document.querySelector(".view-toggle").hidden = true;
     setView(state.view);
     initDetail();
     initFab();
@@ -518,14 +607,17 @@
     if (infoResult.status === "fulfilled") {
       renderInfo(infoResult.value);
       if (!CONFIG.kakaoUrl) {
-        const row = infoResult.value.find((r) => normalizeKey(r["항목"] || "") === "카카오톡");
-        if (row) setKakao(row["내용"]);
+        const row = infoResult.value.find((r) => normalizeKey(get(r, "항목")) === "카카오톡");
+        if (row) setKakao(get(row, "내용"));
       }
     }
     if (noticesResult.status === "fulfilled") renderNotices(noticesResult.value);
+    for (const r of [noticesResult, infoResult]) if (r.status === "rejected") console.warn(r.reason);
 
     if (itemsResult.status === "rejected") {
-      $("status").textContent = "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      const retry = el("button", { type: "button", className: "retry", textContent: "다시 불러오기" });
+      retry.addEventListener("click", () => location.reload());
+      $("status").replaceChildren("정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. ", retry);
       console.error(itemsResult.reason);
       return;
     }

@@ -7,14 +7,18 @@
   <title>엄마수산</title>
   <link rel="icon" type="image/png" href="assets/img/favicon.png">
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <meta name="description" content="엄마수산 상품 안내 — 냉장·냉동·건어물 공급가와 판매 상태">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://momsusan4390.github.io/">
   <meta property="og:title" content="엄마수산">
-  <meta property="og:image" content="assets/img/logo.png">
-  <link rel="stylesheet" href="assets/style.css?v=202610212001">
+  <meta property="og:description" content="엄마수산 상품 안내 — 냉장·냉동·건어물 공급가와 판매 상태">
+  <meta property="og:image" content="https://momsusan4390.github.io/assets/img/logo.png">
+  <link rel="stylesheet" href="assets/style.css?v=202610212022">
 </head>
 <body>
   <header class="hero">
     <div class="wrap">
-      <h1 class="logo"><img src="assets/img/logo.png?v=202610212001" alt="엄마수산" width="800" height="800"></h1>
+      <h1 class="logo"><img src="assets/img/logo.png?v=202610212022" alt="엄마수산" width="800" height="800"></h1>
       <p class="eyebrow" id="updated"></p>
       <p class="intro" id="intro"></p>
       <div class="hero-actions" id="hero-actions"></div>
@@ -30,7 +34,7 @@
 
     <div class="toolbar">
       <input type="search" id="search" placeholder="상품명·원산지 검색" aria-label="상품 검색">
-      <div class="chips" id="chips" role="tablist" aria-label="카테고리"></div>
+      <div class="chips" id="chips" role="group" aria-label="상품 분류"></div>
       <div class="list-controls">
         <span class="count" id="count"></span>
         <div class="controls">
@@ -52,7 +56,7 @@
       </div>
     </div>
 
-    <p class="status" id="status">불러오는 중…</p>
+    <p class="status" id="status" aria-live="polite">불러오는 중…</p>
     <div id="list"></div>
   </main>
 
@@ -78,7 +82,7 @@
       <p class="recent-empty" id="recent-empty">아직 본 상품이 없습니다.<br>상품 카드를 누르면 여기에 담깁니다.</p>
     </div>
 
-    <button type="button" class="fab-btn" id="fab-recent" aria-label="최근 본 상품">
+    <button type="button" class="fab-btn" id="fab-recent" aria-label="최근 본 상품" aria-expanded="false" aria-controls="recent-panel">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
       <span>최근본</span>
       <em class="fab-count" id="recent-count" hidden></em>
@@ -93,7 +97,7 @@
     </button>
   </div>
 
-  <script src="config.js?v=202610212001"></script>
-  <script src="assets/app.js?v=202610212001"></script>
+  <script src="config.js?v=202610212022"></script>
+  <script src="assets/app.js?v=202610212022"></script>
 </body>
 </html>

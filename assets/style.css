@@ -1,3 +1,5 @@
+[hidden] { display: none !important; }
+
 :root {
   --bg: #ffffff;
   --soft: #f6f6f4; /* 흰 배경 위 옅은 구분용 (사진 없음·안내 박스) */
@@ -7,7 +9,7 @@
   --line: #e4e2d8;
   --brand: #2f6b3a;
   --brand-soft: #e6efe3;
-  --warn: #b5541c;
+  --warn: #a14a17;
   --warn-soft: #fbeee4;
   --radius: 14px;
 }
@@ -110,7 +112,7 @@ body {
   height: 32px;
   border: 0;
   background: #fff;
-  color: #b0b0b0;
+  color: #8a8a8a;
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -144,7 +146,7 @@ body {
   font-size: 14px;
   cursor: pointer;
 }
-.chips button[aria-selected="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.chips button[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: #fff; }
 
 .status { color: var(--muted); }
 .status:empty { display: none; }
@@ -218,7 +220,6 @@ body {
   font-size: 13px;
   padding-block: 28px calc(32px + env(safe-area-inset-bottom, 0px));
 }
-.footer a { color: inherit; }
 .footer-line { margin: 0 0 4px; line-height: 1.7; }
 .footer-item { display: inline-block; color: var(--ink); }
 .footer-item + .footer-item::before { content: "|"; margin: 0 10px; color: var(--line); }
@@ -262,7 +263,6 @@ body {
   text-decoration: none;
   cursor: pointer;
 }
-.fab-btn[hidden] { display: none; }
 .fab-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .fab-btn svg .fill { fill: currentColor; stroke: none; }
 .fab-btn span { font-size: 10px; font-weight: 600; line-height: 1; }
@@ -329,7 +329,7 @@ body {
 
 /* ---------- 가격 ---------- */
 .price { display: flex; flex-direction: column; gap: 0; }
-.price-original { color: #9a9a9a; font-size: 13px; text-decoration: line-through; }
+.price-original { color: #767676; font-size: 13px; text-decoration: line-through; }
 .price-now { display: flex; align-items: baseline; gap: 6px; }
 .price-discount { color: #e0321c; font-size: 18px; font-weight: 800; }
 .price-sale { color: var(--ink); font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
@@ -355,6 +355,7 @@ body {
 .modal-open { overflow: hidden; }
 .detail {
   width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
   max-height: calc(100dvh - 48px);
   padding: 0;
   border: 0;
@@ -377,5 +378,23 @@ body {
   background: rgba(255, 255, 255, .92);
   box-shadow: 0 1px 4px rgba(0, 0, 0, .2);
   font-size: 16px;
+  cursor: pointer;
+}
+
+/* 키보드 포커스 표시 (바둑판 카드는 Tab 으로 이동 가능) */
+.card:focus-visible, button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.retry {
+  margin-left: 4px;
+  padding: 4px 12px;
+  border: 1px solid var(--brand);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand);
+  font: inherit;
+  font-size: 13px;
   cursor: pointer;
 }
