@@ -229,16 +229,18 @@
   function renderCard(item) {
     const fields = el("dl", { className: "fields" });
     const links = el("div", { className: "links" });
+    const status = get(item, COL.status);
+    const soldOut = isSoldOut(item);
 
     for (const [key, value] of Object.entries(item)) {
       if (!value || isSpecial(key)) continue;
       const href = safeUrl(value);
-      if (href) links.append(externalLink(`${key} 보기`, href));
+      // 품절 상품은 링크가 있어도 버튼만 보이고 눌리지 않게
+      if (href && soldOut) links.append(el("span", { className: "link-disabled", textContent: `${key} 보기`, title: "품절 상품입니다" }));
+      else if (href) links.append(externalLink(`${key} 보기`, href));
       else fields.append(el("dt", { textContent: key }), el("dd", { textContent: value }));
     }
 
-    const status = get(item, COL.status);
-    const soldOut = status.includes(SOLD_OUT);
     const badge = status
       ? el("span", { className: "badge" + (soldOut ? " warn" : ""), textContent: status })
       : null;
