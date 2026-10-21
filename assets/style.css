@@ -191,7 +191,6 @@ body {
   padding-block: 28px calc(32px + env(safe-area-inset-bottom, 0px));
 }
 .footer a { color: inherit; }
-.footer-logo { display: block; width: 32px; height: 32px; margin-bottom: 8px; }
 .footer-line { margin: 0 0 4px; line-height: 1.7; }
 .footer-item { display: inline-block; color: var(--ink); }
 .footer-item + .footer-item::before { content: "|"; margin: 0 10px; color: var(--line); }
