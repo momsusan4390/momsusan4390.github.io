@@ -1,4 +1,4 @@
-// 엄마네농수산 — 사이트 설정
+// 엄마수산 — 사이트 설정
 // 관리자는 구글 시트만 수정하면 되고, 이 파일은 최초 1회만 설정한다.
 window.APP_CONFIG = {
   // 구글 시트 주소 https://docs.google.com/spreadsheets/d/{여기}/edit 의 {여기} 부분
