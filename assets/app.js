@@ -281,10 +281,12 @@
     const main = sale ?? supply;
     const original = sale !== null && supply !== null && supply > sale ? supply : null;
 
-    let discount = get(item, COL.discount).trim();
-    if (discount && !discount.includes("%")) discount += "%";
-    if (!discount && original) discount = `${Math.round(((original - sale) / original) * 100)}%`;
-    if (!original && !get(item, COL.discount).trim()) discount = "";
+    // 할인율은 실제 할인(판매가 < 공급가)일 때만 표시. 시트의 "0%" 등은 무시
+    let discount = "";
+    if (original) {
+      const entered = toNumber(get(item, COL.discount));
+      discount = `${entered || Math.round(((original - sale) / original) * 100)}%`;
+    }
 
     return { main, original, discount };
   }
