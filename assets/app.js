@@ -46,7 +46,8 @@
   function sheetUrl(kind) {
     if (useSample) return `sample/${kind}.csv`;
     const id = encodeURIComponent(CONFIG.sheetId);
-    return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAMES[kind])}`;
+    // headers=1: 첫 행만 헤더. 생략하면 구글이 글자만 있는 위쪽 여러 행을 헤더 하나로 합쳐 버린다 (안내 탭에서 발생)
+    return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(SHEET_NAMES[kind])}`;
   }
 
   async function fetchCsv(kind) {
