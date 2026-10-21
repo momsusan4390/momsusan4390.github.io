@@ -9,12 +9,12 @@
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
   <meta property="og:title" content="엄마수산">
   <meta property="og:image" content="assets/img/logo.png">
-  <link rel="stylesheet" href="assets/style.css?v=202610211849">
+  <link rel="stylesheet" href="assets/style.css?v=202610211854">
 </head>
 <body>
   <header class="hero">
     <div class="wrap">
-      <h1 class="logo"><img src="assets/img/logo.png?v=202610211849" alt="엄마수산" width="800" height="800"></h1>
+      <h1 class="logo"><img src="assets/img/logo.png?v=202610211854" alt="엄마수산" width="800" height="800"></h1>
       <p class="eyebrow" id="updated"></p>
       <p class="intro" id="intro"></p>
       <div class="hero-actions" id="hero-actions"></div>
@@ -47,7 +47,32 @@
 
   <footer class="wrap footer" id="footer"></footer>
 
-  <script src="config.js?v=202610211849"></script>
-  <script src="assets/app.js?v=202610211849"></script>
+  <div class="fab">
+    <div class="recent-panel" id="recent-panel" hidden>
+      <div class="recent-head">
+        <strong>최근 본 상품</strong>
+        <button type="button" id="recent-close" aria-label="닫기">✕</button>
+      </div>
+      <ul id="recent-list"></ul>
+      <p class="recent-empty" id="recent-empty">아직 본 상품이 없습니다.<br>상품 카드를 누르면 여기에 담깁니다.</p>
+    </div>
+
+    <button type="button" class="fab-btn" id="fab-recent" aria-label="최근 본 상품">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+      <span>최근본</span>
+      <em class="fab-count" id="recent-count" hidden></em>
+    </button>
+    <a class="fab-btn kakao" id="fab-kakao" target="_blank" rel="noopener noreferrer" aria-label="카카오톡 문의" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="fill" d="M12 4C7 4 3 7.1 3 11c0 2.5 1.7 4.7 4.2 5.9L6.4 20l3.6-2.3c.6.1 1.3.2 2 .2 5 0 9-3.1 9-7s-4-6.9-9-6.9z"/></svg>
+      <span>문의</span>
+    </a>
+    <button type="button" class="fab-btn" id="fab-top" aria-label="맨 위로">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 14l6-6 6 6"/></svg>
+      <span>TOP</span>
+    </button>
+  </div>
+
+  <script src="config.js?v=202610211854"></script>
+  <script src="assets/app.js?v=202610211854"></script>
 </body>
 </html>

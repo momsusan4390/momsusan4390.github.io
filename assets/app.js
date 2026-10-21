@@ -124,6 +124,7 @@
     // 값이 URL 인 항목은 상단 버튼으로
     const actions = $("hero-actions");
     for (const [key, value] of Object.entries(info)) {
+      if (normalizeKey(key) === "카카오톡") continue; // 우측 하단 문의 버튼으로 표시
       const href = safeUrl(value);
       if (href) actions.append(externalLink(key, href));
     }
@@ -212,7 +213,7 @@
       ? el("img", { src: imgSrc, alt: get(item, COL.name), loading: "lazy", referrerPolicy: "no-referrer" })
       : el("div", { className: "img-empty", textContent: "사진 준비중" });
 
-    return el("article", { className: "card" + (soldOut ? " sold-out" : "") }, [
+    const card = el("article", { className: "card" + (soldOut ? " sold-out" : "") }, [
       img,
       el("div", { className: "card-body" }, [
         el("div", { className: "card-head" }, [el("h3", { textContent: get(item, COL.name) || "(상품명 없음)" }), badge]),
@@ -221,6 +222,86 @@
         links.childElementCount ? links : null,
       ]),
     ]);
+    card.dataset.name = get(item, COL.name);
+    card.addEventListener("click", () => recordView(item));
+    return card;
+  }
+
+  // ---------- 최근 본 상품 (이 브라우저에만 저장) ----------
+  // 상품 카드를 누르면(상세사진 보기 포함) 기록. 시트에서 사라진 상품은 목록에서 자동 제외
+
+  const RECENT_KEY = "momsusan:recent";
+  const RECENT_MAX = 10;
+
+  function loadRecent() {
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; }
+  }
+
+  function recordView(item) {
+    const name = get(item, COL.name);
+    if (!name) return;
+    const names = [name, ...loadRecent().filter((n) => n !== name)].slice(0, RECENT_MAX);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(names)); } catch { /* 저장 불가 브라우저는 무시 */ }
+    renderRecent();
+  }
+
+  function renderRecent() {
+    const itemsByName = new Map(state.items.map((i) => [get(i, COL.name), i]));
+    const recent = loadRecent().map((n) => itemsByName.get(n)).filter(Boolean);
+
+    $("recent-list").replaceChildren(...recent.map((item) => {
+      const btn = el("button", { type: "button" }, [
+        el("span", { className: "recent-name", textContent: get(item, COL.name) }),
+        el("span", { className: "recent-meta", textContent: [get(item, "공급가"), get(item, COL.status)].filter(Boolean).join(" · ") }),
+      ]);
+      btn.addEventListener("click", () => goToItem(get(item, COL.name)));
+      return el("li", {}, btn);
+    }));
+    $("recent-empty").hidden = recent.length > 0;
+    $("recent-count").textContent = recent.length;
+    $("recent-count").hidden = recent.length === 0;
+  }
+
+  // 목록에서 해당 상품 카드로 이동 (필터·검색에 가려져 있으면 해제)
+  function goToItem(name) {
+    const find = () => [...document.querySelectorAll(".card")].find((c) => c.dataset.name === name);
+    if (!find()) {
+      state.category = ALL;
+      state.query = "";
+      $("search").value = "";
+      renderChips();
+      renderList();
+    }
+    const card = find();
+    if (!card) return;
+    $("recent-panel").hidden = true;
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.classList.remove("flash");
+    void card.offsetWidth; // 애니메이션 재시작
+    card.classList.add("flash");
+  }
+
+  // ---------- 우측 하단 고정 버튼 ----------
+
+  function initFab() {
+    const panel = $("recent-panel");
+    $("fab-recent").addEventListener("click", (e) => {
+      e.stopPropagation();
+      panel.hidden = !panel.hidden;
+    });
+    $("recent-close").addEventListener("click", () => { panel.hidden = true; });
+    panel.addEventListener("click", (e) => e.stopPropagation());
+    document.addEventListener("click", () => { panel.hidden = true; });
+
+    $("fab-top").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  // 카카오톡 문의 주소: config.js kakaoUrl 우선, 없으면 안내 탭의 "카카오톡" 항목. 둘 다 없으면 버튼 숨김
+  function setKakao(url) {
+    const href = safeUrl(url || "");
+    if (!href) return;
+    $("fab-kakao").href = href;
+    $("fab-kakao").hidden = false;
   }
 
   // 냉장 → 냉동 → 건어물 순, 그 외 분류는 시트에 나온 순서대로 뒤에
@@ -295,6 +376,8 @@
   async function init() {
     $("search").addEventListener("input", (e) => { state.query = e.target.value.trim(); renderList(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderList(); });
+    initFab();
+    setKakao(CONFIG.kakaoUrl);
 
     // 공지사항·안내 탭은 없어도 상품은 표시된다
     const [itemsResult, noticesResult, infoResult] = await Promise.allSettled([
@@ -303,7 +386,13 @@
       fetchCsv("info"),
     ]);
 
-    if (infoResult.status === "fulfilled") renderInfo(infoResult.value);
+    if (infoResult.status === "fulfilled") {
+      renderInfo(infoResult.value);
+      if (!CONFIG.kakaoUrl) {
+        const row = infoResult.value.find((r) => normalizeKey(r["항목"] || "") === "카카오톡");
+        if (row) setKakao(row["내용"]);
+      }
+    }
     if (noticesResult.status === "fulfilled") renderNotices(noticesResult.value);
 
     if (itemsResult.status === "rejected") {
@@ -315,6 +404,7 @@
     state.items.forEach((item, i) => state.rowIndex.set(item, i));
     renderChips();
     renderList();
+    renderRecent();
   }
 
   init();
