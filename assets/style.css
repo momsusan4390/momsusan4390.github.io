@@ -1,5 +1,6 @@
 :root {
-  --bg: #f7f6f1;
+  --bg: #ffffff;
+  --soft: #f6f6f4; /* 흰 배경 위 옅은 구분용 (사진 없음·안내 박스) */
   --card: #ffffff;
   --ink: #1f2a1f;
   --muted: #6b7568;
@@ -24,12 +25,11 @@ body {
 .wrap { max-width: 960px; margin: 0 auto; padding-inline: 16px; }
 
 .hero {
-  background: #fff;
-  border-bottom: 1px solid var(--line);
+  background: var(--bg);
   text-align: center;
-  padding-block: calc(20px + env(safe-area-inset-top, 0px)) 20px;
+  padding-block: calc(16px + env(safe-area-inset-top, 0px)) 4px;
 }
-.logo { margin: 0 auto; width: 160px; max-width: 50%; line-height: 0; }
+.logo { margin: 0 auto; width: 88px; line-height: 0; }
 .logo img { display: block; width: 100%; height: auto; }
 .eyebrow { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
 .eyebrow:empty, .intro:empty { display: none; }
@@ -78,7 +78,7 @@ body {
   padding: 8px;
   border: 0;
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--soft);
   color: var(--muted);
   font: inherit;
   font-size: 13px;
@@ -128,12 +128,12 @@ body {
   display: flex;
   flex-direction: column;
 }
-.card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--brand-soft); display: block; }
+.card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--soft); display: block; }
 .img-empty {
   aspect-ratio: 3 / 1;
   display: grid;
   place-items: center;
-  background: var(--brand-soft);
+  background: var(--soft);
   color: var(--muted);
   font-size: 13px;
 }
@@ -142,7 +142,7 @@ body {
 .notes {
   margin: 0;
   padding: 10px 12px;
-  background: var(--bg);
+  background: var(--soft);
   border-radius: 8px;
   font-size: 13px;
   white-space: pre-line;
