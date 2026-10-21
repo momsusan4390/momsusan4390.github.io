@@ -143,9 +143,10 @@ body {
   display: flex;
   flex-direction: column;
 }
-.card img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--soft); display: block; }
+/* 대표 사진: 1:1 정사각 고정, 비율이 다르면 가운데 기준으로 채우고 넘치는 가장자리는 잘라냄 */
+.card img { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: center; background: var(--soft); display: block; }
 .img-empty {
-  aspect-ratio: 3 / 1;
+  aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
   background: var(--soft);

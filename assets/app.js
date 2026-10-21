@@ -101,7 +101,7 @@
     const url = safeUrl(value);
     if (!url) return null;
     const m = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)([\w-]{10,})/);
-    return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w800` : url;
+    return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000` : url;
   }
 
   function el(tag, props = {}, children = []) {
