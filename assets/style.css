@@ -192,11 +192,17 @@ body {
 }
 .footer a { color: inherit; }
 .footer-logo { display: block; width: 32px; height: 32px; margin-bottom: 8px; }
-.footer-name { display: block; color: var(--ink); font-size: 14px; margin-bottom: 8px; }
-.footer-info { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; }
-.footer-info div { display: flex; gap: 6px; }
-.footer-info dt::after { content: " :"; }
-.footer-info dd { margin: 0; color: var(--ink); }
+.footer-line { margin: 0 0 4px; line-height: 1.7; }
+.footer-item { display: inline-block; color: var(--ink); }
+.footer-item + .footer-item::before { content: "|"; margin: 0 10px; color: var(--line); }
+.footer-label { color: var(--muted); }
+.footer-label::after { content: " : "; white-space: pre; }
+/* 휴대폰: 줄이 넘치면 구분선(|)이 줄 앞에 걸리므로 항목마다 줄바꿈, 묶음 사이만 간격 */
+@media (max-width: 600px) {
+  .footer-line { margin-bottom: 8px; line-height: 1.6; }
+  .footer-item { display: block; }
+  .footer-item + .footer-item::before { content: none; }
+}
 .footer-copy { margin: 14px 0 0; font-size: 12px; }
 
 /* ---------- 우측 하단 고정 버튼 ---------- */

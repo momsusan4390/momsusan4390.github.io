@@ -134,18 +134,36 @@
   }
 
   // ---------- 하단 (안내 탭 기반) ----------
-  // 안내 탭의 항목 중 상단·문의 버튼에서 쓰는 것(소개·기준일·링크)을 뺀 나머지를 "항목 : 내용"으로 나열.
-  // 대표자·사업자등록번호·주소·이메일 등은 시트에 행만 추가하면 자동 표시
-  const FOOTER_SKIP = new Set(["업체명", "소개", "기준일", "카카오톡"]);
+  // 줄 구성 고정: [상호명 | 대표자] / [주소] / [사업자등록번호 | 고객센터 | 이메일] / [영업시간]
+  // 값은 안내 탭에서 가져오고, 비어 있는 항목·줄은 생략. 그 밖의 추가 항목은 마지막 줄에 나열
+  const FOOTER_LINES = [
+    ["상호명", "대표자"],
+    ["주소"],
+    ["사업자등록번호", "고객센터", "이메일"],
+    ["영업시간"],
+  ];
+  const FOOTER_ALIASES = { 상호명: ["상호명", "업체명"], 고객센터: ["고객센터", "연락처"] };
+  // 고정 줄에서 쓰는 키(별칭 포함) + 상단·문의 버튼용 키는 추가 항목에서 제외
+  const FOOTER_SKIP = new Set([
+    "소개", "기준일", "카카오톡",
+    ...FOOTER_LINES.flat().flatMap((l) => FOOTER_ALIASES[l] || [l]),
+  ]);
 
   function renderFooter(info) {
-    const name = info["업체명"] || "엄마수산";
-    const rows = Object.entries(info).filter(([k, v]) => v && !FOOTER_SKIP.has(normalizeKey(k)) && !safeUrl(v));
+    const lookup = new Map(Object.entries(info).map(([k, v]) => [normalizeKey(k), v]));
+    const valueOf = (label) =>
+      (FOOTER_ALIASES[label] || [label]).map((k) => lookup.get(k)).find(Boolean) || "";
 
-    $("footer-name").textContent = name;
-    $("footer-info").replaceChildren(...rows.map(([k, v]) =>
-      el("div", {}, [el("dt", { textContent: k }), el("dd", { textContent: v })])
+    const lines = FOOTER_LINES.map((labels) => labels.map((l) => [l, valueOf(l)]).filter(([, v]) => v));
+    lines.push([...lookup].filter(([k, v]) => v && !FOOTER_SKIP.has(k) && !safeUrl(v)));
+
+    $("footer-info").replaceChildren(...lines.filter((l) => l.length).map((items) =>
+      el("p", { className: "footer-line" }, items.map(([label, value]) =>
+        el("span", { className: "footer-item" }, [el("span", { className: "footer-label", textContent: label }), value])
+      ))
     ));
+
+    const name = valueOf("상호명") || "엄마수산";
     $("footer-copy").textContent = `© ${new Date().getFullYear()} ${name}. All rights reserved.`;
   }
 
