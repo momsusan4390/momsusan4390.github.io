@@ -24,17 +24,21 @@ body {
 .wrap { max-width: 960px; margin: 0 auto; padding-inline: 16px; }
 
 .hero {
-  background: var(--brand);
-  color: #fff;
-  padding-block: calc(36px + env(safe-area-inset-top, 0px)) 32px;
-}
-.hero h1 { margin: 4px 0 8px; font-size: 28px; letter-spacing: -0.02em; }
-.eyebrow { margin: 0; font-size: 13px; opacity: .8; }
-.intro { margin: 0; opacity: .92; }
-.hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.hero-actions a {
-  color: var(--brand);
   background: #fff;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  padding-block: calc(20px + env(safe-area-inset-top, 0px)) 20px;
+}
+.logo { margin: 0 auto; width: 160px; max-width: 50%; line-height: 0; }
+.logo img { display: block; width: 100%; height: auto; }
+.eyebrow { margin: 8px 0 0; font-size: 13px; color: var(--muted); }
+.eyebrow:empty, .intro:empty { display: none; }
+.intro { margin: 4px 0 0; color: var(--muted); }
+.hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 12px; }
+.hero-actions:empty { display: none; }
+.hero-actions a {
+  color: #fff;
+  background: var(--brand);
   border-radius: 999px;
   padding: 8px 14px;
   font-weight: 600;

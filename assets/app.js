@@ -116,10 +116,8 @@
   function renderInfo(rows) {
     const info = Object.fromEntries(rows.map((r) => [r["항목"], r["내용"]]).filter(([k]) => k));
 
-    if (info["업체명"]) {
-      $("shop-name").textContent = info["업체명"];
-      document.title = info["업체명"];
-    }
+    // 상단 이름은 로고 이미지로 고정. 업체명은 브라우저 탭 제목에만 반영
+    if (info["업체명"]) document.title = info["업체명"];
     $("intro").textContent = info["소개"] || "";
     $("updated").textContent = info["기준일"] ? `${info["기준일"]} 기준` : "";
 
