@@ -20,6 +20,7 @@
     discount: "할인율",
   };
   const SPECIAL_KEYS = new Set(Object.values(COL));
+  // 분류 순서 기본값. 안내 탭에 "분류 순서" 항목이 있으면 그 값이 우선 (renderInfo)
   const CATEGORY_ORDER = ["냉장", "냉동", "건어물"];
   const SOLD_OUT = "품절";
 
@@ -39,7 +40,7 @@
     try { return localStorage.getItem(VIEW_KEY) === "detail" ? "detail" : "grid"; } catch { return "grid"; }
   };
 
-  const state = { items: [], category: ALL, query: "", sort: "name", view: loadView(), rowIndex: new Map() };
+  const state = { items: [], category: ALL, query: "", sort: "name", view: loadView(), rowIndex: new Map(), categoryOrder: CATEGORY_ORDER };
 
   const normalizeKey = (key) => key.replace(/\s+/g, "");
   const isSpecial = (key) => SPECIAL_KEYS.has(normalizeKey(key));
@@ -158,6 +159,10 @@
     $("intro").textContent = infoGet("소개");
     $("updated").textContent = infoGet("기준일") ? `${infoGet("기준일")} 기준` : "";
 
+    // 분류 순서: "냉장, 냉동, 건어물, 젓갈" 처럼 쉼표(또는 · / 줄바꿈)로 구분
+    const order = infoGet("분류순서").split(/[,，·/\n]+/).map((s) => s.trim()).filter(Boolean);
+    if (order.length) state.categoryOrder = order;
+
     // 값이 URL 인 항목은 상단 버튼으로
     const actions = $("hero-actions");
     for (const [key, value] of Object.entries(info)) {
@@ -181,7 +186,7 @@
   const FOOTER_ALIASES = { 상호명: ["상호명", "업체명"], 고객센터: ["고객센터", "연락처"] };
   // 고정 줄에서 쓰는 키(별칭 포함) + 상단·문의 버튼용 키는 추가 항목에서 제외
   const FOOTER_SKIP = new Set([
-    "소개", "기준일", "카카오톡",
+    "소개", "기준일", "카카오톡", "분류순서",
     ...FOOTER_LINES.flat().flatMap((l) => FOOTER_ALIASES[l] || [l]),
   ]);
 
@@ -508,10 +513,15 @@
     $("fab-kakao").hidden = false;
   }
 
-  // 냉장 → 냉동 → 건어물 순, 그 외 분류는 시트에 나온 순서대로 뒤에
+  // 분류 순서 목록(안내 탭 "분류 순서", 없으면 냉장 → 냉동 → 건어물)대로 정렬.
+  // 목록에 없는 분류는 그 뒤에 시트에 처음 나온 순서대로. 띄어쓰기는 무시하고 비교
   function categories() {
     const seen = [...new Set(state.items.map(categoryOf))];
-    const rank = (c) => (CATEGORY_ORDER.includes(c) ? CATEGORY_ORDER.indexOf(c) : CATEGORY_ORDER.length);
+    const order = state.categoryOrder.map(normalizeKey);
+    const rank = (c) => {
+      const i = order.indexOf(normalizeKey(c));
+      return i === -1 ? order.length : i;
+    };
     return [ALL, ...seen.sort((a, b) => rank(a) - rank(b))];
   }
 
