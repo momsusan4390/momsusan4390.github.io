@@ -72,24 +72,90 @@
   // 탭마다 반드시 있어야 하는 열. 구글은 없는 탭 이름을 요청하면 오류 대신 첫 탭을 돌려주므로,
   // 이 열이 없으면 "엉뚱한 탭"으로 보고 버린다 (예: 상품게시 탭 이름이 바뀌었을 때 공지가 상품으로 보이는 문제)
   const REQUIRED_COLUMN = { items: "상품명", notices: "제목", info: "항목" };
-  const FETCH_TIMEOUT_MS = 10000;
+  const FETCH_TIMEOUT_MS = 12000;
+  const FETCH_RETRIES = 2; // 실패 시 추가 시도 횟수 (1초, 2초 뒤)
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  async function fetchCsv(kind) {
+  async function fetchCsvOnce(kind) {
     const sheetName = SHEET_NAMES[kind];
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
     try {
       const res = await fetch(sheetUrl(kind), { cache: "no-store", signal: ctrl.signal });
-      if (!res.ok) throw new Error(`${sheetName} 시트를 불러오지 못했습니다 (${res.status})`);
-      const rows = parseCsv(await res.text());
+      if (!res.ok) throw new Error(`구글 응답 오류 ${res.status}`);
+      const text = await res.text();
+      // 구글이 접근 제한·로그인 안내 같은 웹페이지를 보내는 경우
+      if (/^\s*</.test(text)) throw new Error("구글이 데이터 대신 안내 페이지를 보냄");
+      const rows = parseCsv(text);
       const required = REQUIRED_COLUMN[kind];
       if (rows.length && !Object.keys(rows[0]).some((k) => normalizeKey(k) === required)) {
-        throw new Error(`${sheetName} 탭에 "${required}" 열이 없습니다 (탭 이름 확인 필요)`);
+        throw new Error(`${sheetName} 탭에 "${required}" 열이 없음 (탭 이름 확인 필요)`);
       }
       return rows;
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  // 일시적인 네트워크·구글 쪽 실패에 대비해 재시도. 성공하면 이 브라우저에 사본 저장
+  async function fetchCsv(kind, onRetry) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const rows = await fetchCsvOnce(kind);
+        saveCache(kind, rows);
+        return rows;
+      } catch (err) {
+        if (attempt >= FETCH_RETRIES) throw err;
+        if (onRetry) onRetry(attempt + 1);
+        await sleep(1000 * (attempt + 1));
+      }
+    }
+  }
+
+  function describeError(err) {
+    if (!err) return "";
+    if (err.name === "AbortError") return "응답 시간 초과";
+    if (err instanceof TypeError) return "연결 차단 또는 끊김 (네트워크·보안 프로그램·시트 공유 설정 확인)";
+    return err.message || String(err);
+  }
+
+  // ---------- 마지막으로 불러온 데이터 사본 (방문자 브라우저) ----------
+  // 시트를 못 불러올 때 빈 화면 대신 마지막 사본을 저장 시각과 함께 보여준다
+
+  const CACHE_PREFIX = "momsusan:cache:";
+
+  function saveCache(kind, rows) {
+    if (useSample) return;
+    try {
+      localStorage.setItem(CACHE_PREFIX + kind, JSON.stringify({ at: Date.now(), sheetId: CONFIG.sheetId, rows }));
+    } catch { /* 저장 불가 브라우저는 무시 */ }
+  }
+
+  function loadCache(kind) {
+    if (useSample) return null;
+    try {
+      const c = JSON.parse(localStorage.getItem(CACHE_PREFIX + kind));
+      return c && c.sheetId === CONFIG.sheetId && Array.isArray(c.rows) && typeof c.at === "number" ? c : null;
+    } catch { return null; }
+  }
+
+  // allSettled 결과 → { rows, staleAt?, error? }. 실패하면 사본으로 대체
+  function settle(result, kind) {
+    if (result.status === "fulfilled") return { rows: result.value };
+    const cache = loadCache(kind);
+    return cache ? { rows: cache.rows, staleAt: cache.at, error: result.reason } : { rows: null, error: result.reason };
+  }
+
+  const formatTime = (ms) => {
+    const d = new Date(ms);
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getMonth() + 1}월 ${d.getDate()}일 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  function retryButton() {
+    const btn = el("button", { type: "button", className: "retry", textContent: "다시 불러오기" });
+    btn.addEventListener("click", () => location.reload());
+    return btn;
   }
 
   // RFC 4180 CSV → 객체 배열 (첫 줄 = 헤더)
@@ -608,30 +674,48 @@
     setKakao(CONFIG.kakaoUrl);
 
     // 공지사항·안내 탭은 없어도 상품은 표시된다
-    const [itemsResult, noticesResult, infoResult] = await Promise.allSettled([
-      fetchCsv("items"),
+    const onItemsRetry = (n) => { $("status").textContent = `연결이 원활하지 않아 다시 시도하는 중… (${n}/${FETCH_RETRIES})`; };
+    const results = await Promise.allSettled([
+      fetchCsv("items", onItemsRetry),
       fetchCsv("notices"),
       fetchCsv("info"),
     ]);
+    const [items, notices, info] = [
+      settle(results[0], "items"),
+      settle(results[1], "notices"),
+      settle(results[2], "info"),
+    ];
+    for (const r of [items, notices, info]) if (r.error) console.warn(r.error);
 
-    if (infoResult.status === "fulfilled") {
-      renderInfo(infoResult.value);
+    if (info.rows) {
+      renderInfo(info.rows);
       if (!CONFIG.kakaoUrl) {
-        const row = infoResult.value.find((r) => normalizeKey(get(r, "항목")) === "카카오톡");
+        const row = info.rows.find((r) => normalizeKey(get(r, "항목")) === "카카오톡");
         if (row) setKakao(get(row, "내용"));
       }
     }
-    if (noticesResult.status === "fulfilled") renderNotices(noticesResult.value);
-    for (const r of [noticesResult, infoResult]) if (r.status === "rejected") console.warn(r.reason);
+    if (notices.rows) renderNotices(notices.rows);
 
-    if (itemsResult.status === "rejected") {
-      const retry = el("button", { type: "button", className: "retry", textContent: "다시 불러오기" });
-      retry.addEventListener("click", () => location.reload());
-      $("status").replaceChildren("정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. ", retry);
-      console.error(itemsResult.reason);
+    if (!items.rows) {
+      $("status").replaceChildren(
+        "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. ",
+        retryButton(),
+        el("small", { className: "status-reason", textContent: `원인: ${describeError(items.error)}` })
+      );
       return;
     }
-    state.items = itemsResult.value.filter(isVisible);
+
+    // 사본으로 대신 보여주는 중이면 안내
+    const staleAt = Math.min(...[items, notices, info].map((r) => r.staleAt || Infinity));
+    if (Number.isFinite(staleAt)) {
+      $("stale").replaceChildren(
+        `인터넷 연결이 불안정해 최신 정보를 불러오지 못했어요. ${formatTime(staleAt)}에 저장된 정보를 보여드려요. `,
+        retryButton()
+      );
+      $("stale").hidden = false;
+    }
+
+    state.items = items.rows.filter(isVisible);
     state.items.forEach((item, i) => state.rowIndex.set(item, i));
     renderChips();
     renderList();

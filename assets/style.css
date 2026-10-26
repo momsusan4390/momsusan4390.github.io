@@ -398,3 +398,14 @@ body {
   font-size: 13px;
   cursor: pointer;
 }
+
+/* 시트를 못 불러와 저장된 사본을 보여줄 때 */
+.stale {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-size: 13px;
+}
+.status-reason { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
