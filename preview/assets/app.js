@@ -49,7 +49,7 @@
 
   const state = {
     items: [], category: ALL, storage: ALL, query: "", sort: "name", view: loadView(),
-    rowIndex: new Map(), categoryOrder: CATEGORY_ORDER, kakaoUrl: "",
+    rowIndex: new Map(), categoryOrder: CATEGORY_ORDER, kakaoUrl: "", seasonLabel: "",
   };
   const PAGE = document.body.dataset.page || "home"; // home | order | notices
 
@@ -243,6 +243,9 @@
     const order = infoGet("분류순서").split(/[,，/\n]+/).map((s) => s.trim()).filter(Boolean);
     if (order.length) state.categoryOrder = order;
 
+    // 제철 띠 위 작은 글씨: 안내 탭 "제철 문구"(예: 10~11월 제철). 비우면 이번 달 자동
+    state.seasonLabel = infoGet("제철문구").trim();
+
     // 값이 URL 인 항목은 상단 버튼으로 (카카오톡·약관 링크는 제자리가 따로 있어 제외)
     const actions = $("hero-actions");
     if (actions) {
@@ -300,7 +303,7 @@
   const aliasesOf = (label) => FOOTER_ALIASES[normalizeKey(label)] || [normalizeKey(label)];
   // 고정 줄에서 쓰는 키(별칭 포함) + 상단·문의 버튼·화면 설정용 키는 추가 항목에서 제외
   const FOOTER_SKIP = new Set([
-    "소개", "기준일", "카카오톡", "분류순서", "고객센터운영시간", "이용약관", "개인정보처리방침",
+    "소개", "기준일", "카카오톡", "분류순서", "제철문구", "주문이메일", "고객센터운영시간", "이용약관", "개인정보처리방침",
     ...FOOTER_LINES.flat().flatMap(aliasesOf),
   ]);
 
@@ -884,7 +887,7 @@
       }));
     };
     const m = $("season-month");
-    if (m) m.textContent = `${new Date().getMonth() + 1}월 제철`;
+    if (m) m.textContent = state.seasonLabel || `${new Date().getMonth() + 1}월 제철`;
     shelf("shelf-rec", COL.rec);
     shelf("shelf-season", COL.season);
   }
