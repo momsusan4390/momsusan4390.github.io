@@ -587,11 +587,28 @@ body {
 .shelf-track::-webkit-scrollbar { display: none; }
 .shelf-track > .card { scroll-snap-align: start; cursor: pointer; }
 .shelf-big { grid-auto-columns: 54%; }
-.shelf-small { grid-auto-columns: 42%; }
-@media (min-width: 700px) {
-  .shelf-big { grid-auto-columns: calc((100% - 30px) / 4); }
-  .shelf-small { grid-auto-columns: calc((100% - 40px) / 5); }
+@media (min-width: 700px) { .shelf-big { grid-auto-columns: calc((100% - 30px) / 4); } }
+
+/* 주력상품 개수별: 적으면 상자 폭에 맞게 늘려 채우고(넘기기 없음), 많으면 위 크기로 고정해 가로 넘기기
+   휴대폰: 1~2개 채움, 3개 이상 넘기기 / PC: 1~3개 채움(1개는 절반 폭), 4개 이상 넘기기 */
+.shelf-big[data-count="1"], .shelf-big[data-count="2"] {
+  grid-auto-flow: row; grid-auto-columns: auto; overflow-x: visible; scroll-snap-type: none;
 }
+.shelf-big[data-count="1"] { grid-template-columns: 1fr; }
+.shelf-big[data-count="2"] { grid-template-columns: 1fr 1fr; }
+@media (min-width: 700px) {
+  .shelf-big[data-count="3"] {
+    grid-auto-flow: row; grid-auto-columns: auto; overflow-x: visible; scroll-snap-type: none;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .shelf-big[data-count="1"] { grid-template-columns: 1fr 1fr; }
+}
+
+/* 지금이 제철: 2열 고정(PC 4열)로 아래로 쌓기 */
+.season-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (min-width: 700px) { .season-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; } }
+.season-grid > .card { cursor: pointer; }
+.season-grid .tags { display: none; }
 .shelf-track .tags { display: none; }          /* 섹션 자체가 추천·제철 표시 */
 .shelf-big .card-body { padding: 10px 12px 12px; }
 .shelf-big .card h3 { font-size: 15px; }

@@ -875,7 +875,7 @@
 
   // ---------- 이달의 주력상품 · 제철 상품 ----------
 
-  // 주력상품: 큰 카드 가로 넘기기 + 순위 리본 / 제철: 작은 카드 가로 넘기기
+  // 주력상품: 큰 카드 + 순위 리본 (적으면 상자에 맞게 늘리고, 많으면 가로 넘기기) / 제철: 2열(PC 4열) 바둑판
   function renderShelves() {
     const pick = (col) => state.items.filter((i) => isYes(get(i, col)))
       .sort(withSoldOutLast((a, b) => state.rowIndex.get(a) - state.rowIndex.get(b)));
@@ -883,7 +883,9 @@
       const box = $(boxId);
       if (!box) return;
       box.hidden = !items.length;
-      box.querySelector(".shelf-track").replaceChildren(...items.map((item, k) => {
+      const track = box.querySelector(".shelf-track, .season-grid");
+      track.dataset.count = String(items.length);   // 개수에 따라 꽉 채움 / 가로 넘김 (style.css)
+      track.replaceChildren(...items.map((item, k) => {
         const card = renderCard(item, { compact: true });
         if (withRank) card.querySelector(".photo").append(el("span", { className: "rank", textContent: String(k + 1) }));
         return card;
