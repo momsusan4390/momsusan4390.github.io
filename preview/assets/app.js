@@ -51,7 +51,7 @@
     items: [], category: ALL, storage: ALL, query: "", sort: "name", view: loadView(),
     rowIndex: new Map(), categoryOrder: CATEGORY_ORDER, kakaoUrl: "", seasonLabel: "",
   };
-  const PAGE = document.body.dataset.page || "home"; // home | order | notices
+  const PAGE = document.body.dataset.page || "home"; // home | order | notices | legal
 
   const normalizeKey = (key) => key.replace(/\s+/g, "");
   const isSpecial = (key) => SPECIAL_KEYS.has(normalizeKey(key));
@@ -314,10 +314,12 @@
     const valueOf = (label) => aliasesOf(label).map((k) => lookup.get(k)).find(Boolean) || "";
 
     // 이용약관·개인정보처리방침: 안내 탭에 문서 주소를 적으면 하단 첫 줄에 링크로 표시
-    const legal = ["이용약관", "개인정보처리방침"]
-      .map((k) => [k, safeUrl(lookup.get(k) || "")])
-      .filter(([, href]) => href);
-    $("footer-links").replaceChildren(...legal.map(([k, href]) => externalLink(k, href)));
+    // 기본은 사이트 안의 문서(terms.html·privacy.html), 안내 탭에 다른 주소를 적으면 그 주소
+    const LEGAL_PAGES = { 이용약관: "terms.html", 개인정보처리방침: "privacy.html" };
+    const legal = Object.entries(LEGAL_PAGES)
+      .map(([k, file]) => [k, safeUrl(lookup.get(k) || "") || new URL(file, location.href).href]);
+    $("footer-links").replaceChildren(...legal.map(([k, href]) =>
+      el("a", { href, textContent: k, ...(k === "개인정보처리방침" ? { className: "strong" } : {}) })));
     $("footer-links").hidden = !legal.length;
 
     const lines = FOOTER_LINES.map((labels) => labels.map((l) => [l, valueOf(l)]).filter(([, v]) => v));
@@ -999,6 +1001,7 @@
     setKakao(CONFIG.kakaoUrl);
     if (PAGE === "order") return initOrderPage();
     if (PAGE === "notices") return initNoticesPage();
+    if (PAGE === "legal") return initLegalPage();
 
     $("search").addEventListener("input", (e) => { state.query = e.target.value.trim(); renderList(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderList(); });
@@ -1084,6 +1087,12 @@
     $("order-notes").replaceChildren(...rows.filter(isNote).map((r) =>
       el("div", { className: "order-note" }, [el("h3", { textContent: get(r, "제목") }), el("p", { textContent: get(r, "내용") })])
     ));
+  }
+
+  // 약관 페이지: 본문은 고정 글, 하단 정보·카카오 버튼만 시트에서
+  async function initLegalPage() {
+    const info = settle((await Promise.allSettled([fetchCsv("info")]))[0], "info");
+    if (info.rows) applyInfo(info.rows);
   }
 
   async function initNoticesPage() {

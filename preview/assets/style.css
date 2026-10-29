@@ -647,3 +647,17 @@ body {
 /* 분류·보관 칩 줄: 옆으로 밀어 볼 수 있되 스크롤 막대는 숨김 */
 .chips { scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
+
+/* ---------- 약관·개인정보처리방침 페이지 ---------- */
+.legal-page { max-width: 760px; padding-bottom: 20px; }
+.legal-page h1 { font-size: 24px; margin: 16px 0 4px; }
+.legal-meta { margin: 0 0 18px; color: var(--muted); font-size: 13px; }
+.legal-page h2 { font-size: 17px; margin: 28px 0 8px; }
+.legal-page p, .legal-page li { font-size: 14.5px; line-height: 1.75; }
+.legal-page p { margin: 0 0 10px; }
+.legal-page ul, .legal-page ol { margin: 0 0 10px; padding-left: 20px; }
+.legal-page table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; font-size: 13.5px; display: block; overflow-x: auto; }
+.legal-page th, .legal-page td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+.legal-page th { background: var(--soft); font-weight: 600; white-space: nowrap; }
+.legal-note { background: var(--soft); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+.footer-links a.strong { color: var(--brand); }   /* 개인정보처리방침은 눈에 띄게 (관행) */
