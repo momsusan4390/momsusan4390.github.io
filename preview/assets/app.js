@@ -1151,11 +1151,14 @@
         text ? el("p", { className: "popup-text", textContent: text }) : null,
       ];
       // 링크: 사이트 안은 같은 창(팝업 닫고 이동), 바깥 주소는 새 창
+      // "버튼 문구"를 적으면 이미지 아래 버튼만 링크, 비우면 팝업 전체가 링크
       const link = resolveLink(get(r, "링크"));
-      const body = link
-        ? el("a", { className: "popup-body", ...linkAttrs(link) }, parts)
-        : el("div", { className: "popup-body" }, parts);
-      if (link && !link.external) body.addEventListener("click", () => dlg.close());
+      const buttonText = get(r, "버튼 문구").trim();
+      const button = link && buttonText ? el("a", { className: "popup-btn", ...linkAttrs(link), textContent: buttonText }) : null;
+      if (button) parts.push(button);
+      const linkEl = button || (link ? el("a", { className: "popup-body", ...linkAttrs(link) }, parts) : null);
+      const body = button || !link ? el("div", { className: "popup-body" }, parts) : linkEl;
+      if (link && !link.external) linkEl.addEventListener("click", () => dlg.close());
       // 사진을 못 불러오면: 글이 있으면 글만, 없으면 다음 팝업으로
       if (img) img.addEventListener("error", () => { img.remove(); if (!text) next(); }, { once: true });
       $("popup-content").replaceChildren(body);
