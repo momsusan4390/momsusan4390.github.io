@@ -251,6 +251,64 @@
     return el("a", { href, textContent: label, target: "_blank", rel: "noopener noreferrer" });
   }
 
+  // ---------- 사이트 안 링크 ----------
+  // 시트 '링크' 칸(배너·팝업·공지)에 https 주소 대신 아래처럼 적으면 사이트 안으로 이동 (띄어쓰기 무시)
+  //   위치: 주력상품 · 제철 · 전체상품 · 맨위      페이지: 공지사항 · 주문방법 · 이용약관 · 개인정보처리방침
+  //   분류:조개·전복 / 보관:냉동 / 상품:홍가리비 1kg
+  const LINK_PAGES = { 공지사항: "notices.html", 공지: "notices.html", 주문방법: "order.html", 이용약관: "terms.html", 개인정보처리방침: "privacy.html" };
+  const LINK_SPOTS = { 주력상품: "rec", 이달의주력상품: "rec", 제철: "season", 제철상품: "season", 지금이제철: "season", 전체상품: "list", 맨위: "top", 처음: "top", 홈: "top" };
+  const LINK_KINDS = { 분류: "cat", 보관: "storage", 상품: "item" };
+
+  // → { href, external } 또는 null. 첫 화면 위치는 "#rec", "#item=상품명" 같은 주소 뒤 # 로 표시
+  function resolveLink(value) {
+    const v = String(value || "").trim();
+    if (!v) return null;
+    const url = safeUrl(v);
+    if (url) return { href: url, external: new URL(url).host !== location.host };
+    const toHome = (hash) => ({ href: (PAGE === "home" ? "" : "./") + "#" + hash, external: false });
+    const m = v.match(/^(분류|보관|상품)\s*[:：]\s*(.+)$/);
+    if (m) return toHome(`${LINK_KINDS[m[1]]}=${encodeURIComponent(m[2].trim())}`);
+    const key = normalizeKey(v);
+    if (LINK_PAGES[key]) return { href: LINK_PAGES[key], external: false };
+    if (LINK_SPOTS[key]) return toHome(LINK_SPOTS[key]);
+    return null;
+  }
+
+  // a 태그 속성: 바깥 주소만 새 창
+  const linkAttrs = (link) => ({ href: link.href, ...(link.external ? { target: "_blank", rel: "noopener noreferrer" } : {}) });
+
+  // 첫 화면: 주소 뒤 # 를 읽어 해당 위치로 이동 (처리 후 # 는 지워서 같은 링크를 다시 눌러도 동작)
+  function applyHash() {
+    const raw = location.hash.slice(1);
+    if (!raw) return;
+    history.replaceState(null, "", location.pathname + location.search);
+    let decoded;
+    try { decoded = decodeURIComponent(raw); } catch { return; }
+    const [kind, ...rest] = decoded.split("=");
+    const value = normalizeKey(rest.join("="));
+    const scrollToEl = (node) => {
+      if (!node || node.hidden) return scrollToList();
+      node.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    if (kind === "top") return window.scrollTo({ top: 0, behavior: "smooth" });
+    if (kind === "rec") return scrollToEl($("shelf-rec"));
+    if (kind === "season") return scrollToEl($("shelf-season"));
+    if (kind === "list") return scrollToList();
+    if (kind === "cat") {
+      const c = categories().find((x) => normalizeKey(x) === value);
+      return c ? selectCategory(c) : scrollToList();
+    }
+    if (kind === "storage") {
+      const st = storageList().find((x) => normalizeKey(x) === value);
+      return st ? selectStorage(st) : scrollToList();
+    }
+    if (kind === "item") {
+      const item = state.items.find((i) => normalizeKey(get(i, COL.name)) === value);
+      if (!item) return scrollToList();
+      return SUPPORTS_DIALOG ? openDetail(item) : goToItem(get(item, COL.name));
+    }
+  }
+
   // ---------- 안내 시트 ----------
 
   function renderInfo(rows) {
@@ -386,7 +444,7 @@
     if (!notices.length) return 0;
 
     const items = notices.map((r, i) => {
-      const href = safeUrl(get(r, "링크"));
+      const link = resolveLink(get(r, "링크"));
       const summary = el("summary", {}, [
         isYes(get(r, "중요")) ? el("span", { className: "badge warn", textContent: "중요" }) : null,
         el("span", { className: "notice-title", textContent: get(r, "제목") || "공지" }),
@@ -394,7 +452,7 @@
       ]);
       const body = el("div", { className: "notice-body" }, [
         get(r, "내용") ? el("p", { textContent: get(r, "내용") }) : null,
-        href ? externalLink("자세히 보기", href) : null,
+        link ? el("a", { ...linkAttrs(link), textContent: "자세히 보기" }) : null,
       ]);
       // 숨김은 li 에 걸어야 구분선(li + li 테두리)이 겹치지 않는다
       return el("li", { hidden: i >= preview }, el("details", { open: i === 0 }, [summary, body]));
@@ -852,9 +910,9 @@
       .filter((r) => isVisible(r) && toImageUrl(get(r, "이미지")))
       .map((r) => {
         const img = el("img", { src: toImageUrl(get(r, "이미지"), 1600), alt: get(r, "제목") || "엄마수산 배너", referrerPolicy: "no-referrer", loading: "eager" });
-        const href = safeUrl(get(r, "링크"));
-        const slide = href
-          ? el("a", { className: "slide", href, target: "_blank", rel: "noopener noreferrer" }, img)
+        const link = resolveLink(get(r, "링크"));
+        const slide = link
+          ? el("a", { className: "slide", ...linkAttrs(link) }, img)
           : el("div", { className: "slide" }, img);
         // 사진을 못 불러오면 그 배너만 빼기
         img.addEventListener("error", () => { slide.remove(); updateDots(); if (!track.children.length) box.hidden = true; }, { once: true });
@@ -1092,12 +1150,12 @@
         !img && title ? el("h2", { textContent: title }) : null,
         text ? el("p", { className: "popup-text", textContent: text }) : null,
       ];
-      // 링크: 사이트 안 주소는 같은 창, 바깥 주소는 새 창
-      const href = safeUrl(get(r, "링크"));
-      const external = href && new URL(href).host !== location.host;
-      const body = href
-        ? el("a", { className: "popup-body", href, ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}) }, parts)
+      // 링크: 사이트 안은 같은 창(팝업 닫고 이동), 바깥 주소는 새 창
+      const link = resolveLink(get(r, "링크"));
+      const body = link
+        ? el("a", { className: "popup-body", ...linkAttrs(link) }, parts)
         : el("div", { className: "popup-body" }, parts);
+      if (link && !link.external) body.addEventListener("click", () => dlg.close());
       // 사진을 못 불러오면: 글이 있으면 글만, 없으면 다음 팝업으로
       if (img) img.addEventListener("error", () => { img.remove(); if (!text) next(); }, { once: true });
       $("popup-content").replaceChildren(body);
@@ -1153,7 +1211,8 @@
 
     if (info.rows) applyInfo(info.rows);
     if (banners.rows) renderBanners(banners.rows);
-    if (popups.rows) renderPopups(popups.rows);
+    // 특정 상품·위치 링크로 들어온 경우엔 팝업을 띄우지 않음
+    if (popups.rows && !location.hash) renderPopups(popups.rows);
 
     if (!items.rows) {
       showLoadError($("status"), items.error);
@@ -1169,6 +1228,10 @@
     renderChips();
     renderList();
     renderRecent();
+
+    // 주소 뒤 # (배너·팝업·공지·다른 페이지에서 온 사이트 안 링크)
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
   }
 
   function applyInfo(rows) {
