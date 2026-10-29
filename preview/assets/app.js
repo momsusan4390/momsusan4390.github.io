@@ -875,7 +875,7 @@
 
   // ---------- 이달의 주력상품 · 제철 상품 ----------
 
-  // 주력상품: 큰 카드 + 순위 리본 (적으면 상자에 맞게 늘리고, 많으면 가로 넘기기) / 제철: 2열(PC 4열) 바둑판
+  // 주력상품: 큰 카드 + 순위 리본 (적으면 상자에 맞게 늘리고, 많으면 가로 넘기기) / 제철: 가로형 타일 2열
   function renderShelves() {
     const pick = (col) => state.items.filter((i) => isYes(get(i, col)))
       .sort(withSoldOutLast((a, b) => state.rowIndex.get(a) - state.rowIndex.get(b)));
@@ -886,6 +886,7 @@
       const track = box.querySelector(".shelf-track, .season-grid");
       track.dataset.count = String(items.length);   // 개수에 따라 꽉 채움 / 가로 넘김 (style.css)
       track.replaceChildren(...items.map((item, k) => {
+        if (!withRank) return renderTile(item);   // 제철: 가로형 타일
         const card = renderCard(item, { compact: true });
         if (withRank) card.querySelector(".photo").append(el("span", { className: "rank", textContent: String(k + 1) }));
         return card;
@@ -895,6 +896,41 @@
     fill("shelf-season", pick(COL.season), false);
     const m = $("season-month");
     if (m) m.textContent = `${new Date().getMonth() + 1}월 제철`;
+  }
+
+  // 제철 타일: 사진 왼쪽 + 이름·(PC: 원산지·규격·안내)·가격 오른쪽
+  function renderTile(item) {
+    const soldOut = isSoldOut(item);
+    const imgSrc = toImageUrl(get(item, COL.photo));
+    const emptyPhoto = () => el("div", { className: "img-empty", textContent: "준비중" });
+    const img = imgSrc
+      ? el("img", { src: imgSrc, alt: get(item, COL.name), loading: "lazy", referrerPolicy: "no-referrer" })
+      : emptyPhoto();
+    if (imgSrc) img.addEventListener("error", () => img.replaceWith(emptyPhoto()), { once: true });
+
+    const meta = [get(item, "원산지"), get(item, "규격 및 구성")].filter(Boolean).join(" · ");
+    const tile = el("article", { className: "tile" + (soldOut ? " sold-out" : "") }, [
+      el("div", { className: "photo" }, img),
+      el("div", { className: "tile-body" }, [
+        el("div", { className: "tile-top" }, [
+          storageBadge(item),
+          // 휴대폰에서는 공간이 좁아 할인율을 위쪽 작은 표시로 (PC는 가격 줄에 그대로)
+          priceInfo(item).discount ? el("span", { className: "badge tile-off", textContent: priceInfo(item).discount }) : null,
+          soldOut ? el("span", { className: "badge warn", textContent: get(item, COL.status) }) : null,
+        ]),
+        el("h3", { textContent: get(item, COL.name) || "(상품명 없음)" }),
+        meta ? el("p", { className: "tile-meta", textContent: meta }) : null,
+        get(item, COL.notes) ? el("p", { className: "tile-desc", textContent: get(item, COL.notes) }) : null,
+        renderPrice(item),
+      ]),
+    ]);
+    tile.dataset.name = get(item, COL.name);
+    tile.tabIndex = 0;
+    tile.setAttribute("role", "button");
+    tile.setAttribute("aria-label", `${get(item, COL.name)} 자세히 보기`);
+    tile.addEventListener("click", () => (SUPPORTS_DIALOG ? openDetail(item) : goToItem(get(item, COL.name))));
+    tile.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); tile.click(); } });
+    return tile;
   }
 
   // ---------- 정렬 (분류 그룹 안에서 적용) ----------
