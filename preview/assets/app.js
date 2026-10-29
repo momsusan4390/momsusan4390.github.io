@@ -872,6 +872,7 @@
     function updateDots() {
       const n = track.children.length;
       dots.hidden = n < 2;
+      $("banner-prev").hidden = $("banner-next").hidden = n < 2;
       if (dots.children.length !== n) {
         dots.replaceChildren(...[...Array(n)].map((_, k) => {
           const dot = el("button", { type: "button" });
@@ -897,6 +898,14 @@
     for (const ev of ["pointerdown", "touchstart", "wheel"]) {
       track.addEventListener(ev, () => { pauseUntil = Date.now() + 8000; }, { passive: true });
     }
+    // 좌우 화살표: 마지막 장 다음은 첫 장, 첫 장 이전은 마지막 장
+    const step = (d) => {
+      const n = track.children.length;
+      pauseUntil = Date.now() + 8000;
+      goTo((current() + d + n) % n);
+    };
+    $("banner-prev").addEventListener("click", () => step(-1));
+    $("banner-next").addEventListener("click", () => step(1));
     box.addEventListener("mouseenter", () => { hovering = true; });
     box.addEventListener("mouseleave", () => { hovering = false; });
     box.addEventListener("focusin", () => { hovering = true; });

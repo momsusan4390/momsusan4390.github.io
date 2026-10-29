@@ -484,6 +484,25 @@ body {
 .banner .slide { scroll-snap-align: start; display: block; line-height: 0; }
 /* 배너 이미지 권장: 1500×600 (5:2), 글자는 가운데 쪽에 */
 .banner img { width: 100%; aspect-ratio: 5 / 2; object-fit: cover; background: var(--soft); display: block; }
+/* 좌우 화살표: 사진 세로 가운데, 끝에서 누르면 반대쪽 끝으로 */
+.banner-stage { position: relative; }
+.banner-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0;
+  display: grid; place-items: center; cursor: pointer;
+  background: rgba(255, 255, 255, .85); color: var(--brand); box-shadow: 0 1px 4px rgba(0, 0, 0, .18);
+}
+.banner-arrow[hidden] { display: none; }
+.banner-arrow.prev { left: 6px; }
+.banner-arrow.next { right: 6px; }
+.banner-arrow svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.banner-arrow:hover { background: var(--card); }
+@media (min-width: 820px) {
+  .banner-arrow { width: 42px; height: 42px; }
+  .banner-arrow svg { width: 22px; height: 22px; }
+  .banner-arrow.prev { left: 14px; }
+  .banner-arrow.next { right: 14px; }
+}
 .banner-dots { display: flex; justify-content: center; margin-top: 2px; }
 /* 누르는 영역은 24px, 보이는 점은 그 안의 작은 점 */
 .banner-dots button { border: 0; padding: 0; background: none; cursor: pointer; height: 24px; min-width: 24px; display: grid; place-items: center; }
