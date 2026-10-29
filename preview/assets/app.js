@@ -1174,6 +1174,7 @@
     }
 
     $("popup-close").addEventListener("click", next);
+    $("popup-x").addEventListener("click", next);
     $("popup-today").addEventListener("click", () => { hidePopupToday(dlg.dataset.id); next(); });
     dlg.addEventListener("cancel", (e) => { e.preventDefault(); next(); });   // Esc = 닫기
     dlg.addEventListener("close", () => document.documentElement.classList.remove("modal-open"));
