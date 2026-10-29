@@ -73,6 +73,7 @@
     info: CONFIG.infoSheet || "안내",
     banners: CONFIG.bannerSheet || "배너",
     order: CONFIG.orderSheet || "주문방법",
+    popups: CONFIG.popupSheet || "팝업",
   };
 
   // 내 컴퓨터(localhost)에서 주소 뒤에 ?sample 을 붙이면 시트 대신 샘플 데이터로 화면 확인
@@ -88,7 +89,7 @@
 
   // 탭마다 반드시 있어야 하는 열. 구글은 없는 탭 이름을 요청하면 오류 대신 첫 탭을 돌려주므로,
   // 이 열이 없으면 "엉뚱한 탭"으로 보고 버린다 (예: 상품게시 탭 이름이 바뀌었을 때 공지가 상품으로 보이는 문제)
-  const REQUIRED_COLUMN = { items: "상품명", notices: "제목", info: "항목", banners: "이미지", order: "제목" };
+  const REQUIRED_COLUMN = { items: "상품명", notices: "제목", info: "항목", banners: "이미지", order: "제목", popups: "종료일" };
   const FETCH_TIMEOUT_MS = 12000;
   const FETCH_RETRIES = 2; // 실패 시 추가 시도 횟수 (1초, 2초 뒤)
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -1038,6 +1039,85 @@
 
   // ---------- 시작 ----------
 
+  // ---------- 접속 팝업 (팝업 탭: 제목 | 이미지 | 내용 | 링크 | 시작일 | 종료일 | 노출) ----------
+  // 기간 안의 팝업을 시트 순서대로 하나씩 띄운다. "오늘 하루 보지 않기"는 방문자 브라우저에 오늘 날짜와 함께 저장
+
+  const POPUP_HIDE_KEY = "momsusan:popup-hide";
+  const todayKey = () => {
+    const d = new Date();
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  };
+  const popupId = (r) => normalizeKey([get(r, "제목"), get(r, "이미지"), get(r, "내용")].join("|")).slice(0, 200);
+
+  function loadPopupHides() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(POPUP_HIDE_KEY));
+      return saved && saved.day === todayKey() && Array.isArray(saved.ids) ? saved.ids : [];
+    } catch { return []; }
+  }
+
+  function hidePopupToday(id) {
+    const ids = [...new Set([...loadPopupHides(), id])];
+    try { localStorage.setItem(POPUP_HIDE_KEY, JSON.stringify({ day: todayKey(), ids })); } catch { /* 저장 불가 브라우저는 무시 */ }
+  }
+
+  function renderPopups(rows) {
+    const dlg = $("popup");
+    if (!dlg || !SUPPORTS_DIALOG) return;
+    const today = todayKey();
+    const hidden = new Set(loadPopupHides());
+    // 시작일·종료일은 비우면 제한 없음 (종료일 당일까지 표시)
+    const queue = rows.filter((r) => {
+      if (!isVisible(r) || !(toImageUrl(get(r, "이미지")) || get(r, "내용").trim())) return false;
+      const start = dateKey(get(r, "시작일"));
+      const end = dateKey(get(r, "종료일"));
+      return (!start || start <= today) && (!end || today <= end) && !hidden.has(popupId(r));
+    });
+    if (!queue.length) return;
+
+    let k = 0;
+    const next = () => {
+      k += 1;
+      if (k < queue.length) show();
+      else dlg.close();
+    };
+    function show() {
+      const r = queue[k];
+      const title = get(r, "제목").trim();
+      const text = get(r, "내용").trim();
+      const imgSrc = toImageUrl(get(r, "이미지"), 800);
+      const img = imgSrc ? el("img", { src: imgSrc, alt: title || "엄마수산 안내", referrerPolicy: "no-referrer" }) : null;
+      const parts = [
+        img,
+        !img && title ? el("h2", { textContent: title }) : null,
+        text ? el("p", { className: "popup-text", textContent: text }) : null,
+      ];
+      // 링크: 사이트 안 주소는 같은 창, 바깥 주소는 새 창
+      const href = safeUrl(get(r, "링크"));
+      const external = href && new URL(href).host !== location.host;
+      const body = href
+        ? el("a", { className: "popup-body", href, ...(external ? { target: "_blank", rel: "noopener noreferrer" } : {}) }, parts)
+        : el("div", { className: "popup-body" }, parts);
+      // 사진을 못 불러오면: 글이 있으면 글만, 없으면 다음 팝업으로
+      if (img) img.addEventListener("error", () => { img.remove(); if (!text) next(); }, { once: true });
+      $("popup-content").replaceChildren(body);
+      $("popup-count").textContent = queue.length > 1 ? `${k + 1} / ${queue.length}` : "";
+      dlg.dataset.id = popupId(r);
+      dlg.setAttribute("aria-label", title || "엄마수산 안내");
+      if (!dlg.open) {
+        dlg.showModal();
+        document.documentElement.classList.add("modal-open");
+      }
+      $("popup-close").focus();
+    }
+
+    $("popup-close").addEventListener("click", next);
+    $("popup-today").addEventListener("click", () => { hidePopupToday(dlg.dataset.id); next(); });
+    dlg.addEventListener("cancel", (e) => { e.preventDefault(); next(); });   // Esc = 닫기
+    dlg.addEventListener("close", () => document.documentElement.classList.remove("modal-open"));
+    show();
+  }
+
   async function init() {
     initNav();
     initFab();
@@ -1061,16 +1141,19 @@
       fetchCsv("items", onItemsRetry),
       fetchCsv("info"),
       fetchCsv("banners"),
+      fetchCsv("popups"),
     ]);
-    const [items, info, banners] = [
+    const [items, info, banners, popups] = [
       settle(results[0], "items"),
       settle(results[1], "info"),
       settle(results[2], "banners"),
+      settle(results[3], "popups"),
     ];
-    for (const r of [items, info, banners]) if (r.error) console.warn(r.error);
+    for (const r of [items, info, banners]) if (r.error) console.warn(r.error);   // 팝업 탭은 없어도 되는 탭
 
     if (info.rows) applyInfo(info.rows);
     if (banners.rows) renderBanners(banners.rows);
+    if (popups.rows) renderPopups(popups.rows);
 
     if (!items.rows) {
       showLoadError($("status"), items.error);
