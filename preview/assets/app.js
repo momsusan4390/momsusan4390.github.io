@@ -55,8 +55,10 @@
 
   const normalizeKey = (key) => key.replace(/\s+/g, "");
   const isSpecial = (key) => SPECIAL_KEYS.has(normalizeKey(key));
+  // 열 이름은 띄어쓰기를 무시하고 찾는다 (요청 쪽 이름에 띄어쓰기가 있어도 됨)
   const get = (item, col) => {
-    const key = Object.keys(item).find((k) => normalizeKey(k) === col);
+    const want = normalizeKey(col);
+    const key = Object.keys(item).find((k) => normalizeKey(k) === want);
     return key ? item[key] : "";
   };
   const categoryOf = (item) => get(item, COL.category) || "기타";
@@ -873,23 +875,74 @@
 
   // ---------- 이달의 주력상품 · 제철 상품 ----------
 
+  // 주력상품: 남색 띠 + 큰 카드 가로 넘기기 + 순위 리본
+  // 제철: 흰 바탕 + 사진·설명 가로 카드 목록 (3개까지, 나머지는 더보기)
+  const SEASON_PREVIEW = 3;
   function renderShelves() {
-    const shelf = (id, col) => {
-      const box = $(id);
-      if (!box) return;
-      const items = state.items.filter((i) => isYes(get(i, col)))
-        .sort(withSoldOutLast((a, b) => state.rowIndex.get(a) - state.rowIndex.get(b)));
-      box.hidden = !items.length;
-      box.querySelector(".shelf-track").replaceChildren(...items.map((item, k) => {
+    const pick = (col) => state.items.filter((i) => isYes(get(i, col)))
+      .sort(withSoldOutLast((a, b) => state.rowIndex.get(a) - state.rowIndex.get(b)));
+
+    const rec = pick(COL.rec);
+    const recBox = $("shelf-rec");
+    if (recBox) {
+      recBox.hidden = !rec.length;
+      recBox.querySelector(".shelf-track").replaceChildren(...rec.map((item, k) => {
         const card = renderCard(item, { compact: true });
-        if (col === COL.rec) card.querySelector(".photo").append(el("span", { className: "rank", textContent: String(k + 1) }));
+        card.querySelector(".photo").append(el("span", { className: "rank", textContent: String(k + 1) }));
         return card;
       }));
-    };
-    const m = $("season-month");
-    if (m) m.textContent = state.seasonLabel || `${new Date().getMonth() + 1}월 제철`;
-    shelf("shelf-rec", COL.rec);
-    shelf("shelf-season", COL.season);
+    }
+
+    const season = pick(COL.season);
+    const seasonBox = $("shelf-season");
+    if (seasonBox) {
+      seasonBox.hidden = !season.length;
+      const cards = season.map((item, k) => {
+        const card = renderWideCard(item);
+        card.hidden = k >= SEASON_PREVIEW;
+        return card;
+      });
+      $("season-list").replaceChildren(...cards);
+      const more = $("season-more");
+      more.hidden = season.length <= SEASON_PREVIEW;
+      more.textContent = `더보기 (${season.length})`;
+      more.onclick = () => { cards.forEach((c) => { c.hidden = false; }); more.hidden = true; };
+      $("season-month").textContent = `${new Date().getMonth() + 1}월 제철`;
+    }
+  }
+
+  // 사진 왼쪽 + 이름·산지·규격·안내 한 줄 + 가격 (제철 목록용)
+  function renderWideCard(item) {
+    const soldOut = isSoldOut(item);
+    const imgSrc = toImageUrl(get(item, COL.photo));
+    const emptyPhoto = () => el("div", { className: "img-empty", textContent: "사진 준비중" });
+    const img = imgSrc
+      ? el("img", { src: imgSrc, alt: get(item, COL.name), loading: "lazy", referrerPolicy: "no-referrer" })
+      : emptyPhoto();
+    if (imgSrc) img.addEventListener("error", () => img.replaceWith(emptyPhoto()), { once: true });
+
+    const meta = [get(item, "원산지"), get(item, "규격 및 구성")].filter(Boolean).join(" · ");
+    const desc = get(item, COL.notes);
+    const status = get(item, COL.status);
+    const card = el("article", { className: "wide-card" + (soldOut ? " sold-out" : "") }, [
+      el("div", { className: "photo" }, [img, storageBadge(item)]),
+      el("div", { className: "wide-body" }, [
+        el("div", { className: "card-head" }, [
+          el("h3", { textContent: get(item, COL.name) || "(상품명 없음)" }),
+          status ? el("span", { className: "badge" + (soldOut ? " warn" : ""), textContent: status }) : null,
+        ]),
+        meta ? el("p", { className: "wide-meta", textContent: meta }) : null,
+        desc ? el("p", { className: "wide-desc", textContent: desc }) : null,
+        renderPrice(item),
+      ]),
+    ]);
+    card.dataset.name = get(item, COL.name);
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", `${get(item, COL.name)} 자세히 보기`);
+    card.addEventListener("click", () => (SUPPORTS_DIALOG ? openDetail(item) : goToItem(get(item, COL.name))));
+    card.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.click(); } });
+    return card;
   }
 
   // ---------- 정렬 (분류 그룹 안에서 적용) ----------
