@@ -169,7 +169,7 @@ body {
   padding: 6px 28px 6px 12px;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7568' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7084' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 12px center;
   appearance: none;
   -webkit-appearance: none;
   color: var(--ink);
@@ -483,10 +483,11 @@ body {
 .banner .slide { scroll-snap-align: start; display: block; line-height: 0; }
 /* 배너 이미지 권장: 1500×600 (5:2), 글자는 가운데 쪽에 */
 .banner img { width: 100%; aspect-ratio: 5 / 2; object-fit: cover; background: var(--soft); display: block; }
-.banner-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
-.banner-dots button { border: 0; padding: 0; cursor: pointer; }
-.banner-dots button { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: width .2s; }
-.banner-dots button.on { background: var(--brand); width: 18px; border-radius: 4px; }
+.banner-dots { display: flex; justify-content: center; margin-top: 2px; }
+/* 누르는 영역은 24px, 보이는 점은 그 안의 작은 점 */
+.banner-dots button { border: 0; padding: 0; background: none; cursor: pointer; height: 24px; min-width: 19px; display: grid; place-items: center; }
+.banner-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: width .2s; }
+.banner-dots button.on::before { background: var(--brand); width: 18px; border-radius: 4px; }
 
 /* ---------- 고객센터 안내 ---------- */
 .cs { margin-top: 36px; padding: 18px 20px; border-radius: var(--radius); background: var(--soft); display: grid; gap: 6px; }
@@ -560,11 +561,14 @@ body {
    3) 카드 = 큰 카드(주력상품) / 작은 카드(제철 넘기기·전체 목록) 두 가지
    4) 강조 = 주력상품 한 곳만, 콘텐츠 폭 안의 둥근 남색 상자 */
 .home-sec { padding-block: 0 28px; }
-.home-sec:first-child { padding-top: 20px; }               /* 배너와 주력상품 사이 여백 */
+.home { padding-top: 20px; }                                /* 배너와 첫 섹션 사이 여백 */
 /* 구분선은 콘텐츠 폭 안에서만 (화면 끝까지 긋지 않음) */
-.home-sec + .home-sec > .wrap::before { content: ""; display: block; height: 1px; background: var(--line); margin-bottom: 26px; }
-.sec-rec + .home-sec > .wrap::before { display: none; }   /* 남색 상자 다음은 여백만 */
-.sec-rec + .home-sec { padding-top: 4px; }
+.home-sec:not([hidden]) ~ .home-sec:not([hidden]) > .wrap::before { content: ""; display: block; height: 1px; background: var(--line); margin-bottom: 26px; }
+/* 남색 상자 다음은 여백만 (제철이 숨겨져 있으면 그다음 섹션) */
+.sec-rec:not([hidden]) + .home-sec:not([hidden]) > .wrap::before,
+.sec-rec:not([hidden]) + .home-sec[hidden] + .home-sec:not([hidden]) > .wrap::before { display: none; }
+.sec-rec:not([hidden]) + .home-sec,
+.sec-rec:not([hidden]) + .home-sec[hidden] + .home-sec { padding-top: 4px; }
 
 .section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 14px; }
 .section-eyebrow { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .14em; color: var(--brand); }
@@ -618,7 +622,6 @@ body {
 .tile-body { display: grid; gap: 3px; min-width: 0; }
 .tile-top { display: flex; gap: 4px; flex-wrap: wrap; }
 .tile-top .badge { font-size: 11px; padding: 2px 6px; box-shadow: none; }
-.badge.tile-off { display: none; }               /* 할인율은 가격 줄에 표시 */
 .tile h3 { margin: 0; font-size: 16px; line-height: 1.35; }
 .tile-meta { margin: 0; font-size: 13px; color: var(--muted); }
 .tile-desc { margin: 0; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
@@ -636,7 +639,7 @@ body {
 /* 주력상품 순위 리본 */
 .rank {
   position: absolute; top: 0; right: 12px; width: 34px; height: 44px;
-  background: var(--point); color: var(--kakao-ink); font-weight: 800; font-size: 18px;
+  background: var(--point); color: var(--ink); font-weight: 800; font-size: 18px;
   display: grid; place-items: center; padding-bottom: 6px;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
 }

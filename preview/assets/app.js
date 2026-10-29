@@ -49,7 +49,7 @@
 
   const state = {
     items: [], category: ALL, storage: ALL, query: "", sort: "name", view: loadView(),
-    rowIndex: new Map(), categoryOrder: CATEGORY_ORDER, kakaoUrl: "", seasonLabel: "",
+    rowIndex: new Map(), categoryOrder: CATEGORY_ORDER, kakaoUrl: "",
   };
   const PAGE = document.body.dataset.page || "home"; // home | order | notices | legal
 
@@ -75,8 +75,9 @@
     order: CONFIG.orderSheet || "주문방법",
   };
 
-  // 주소 뒤에 ?sample 을 붙이면 시트 대신 샘플 데이터로 화면 확인
-  const useSample = !CONFIG.sheetId || new URLSearchParams(location.search).has("sample");
+  // 내 컴퓨터(localhost)에서 주소 뒤에 ?sample 을 붙이면 시트 대신 샘플 데이터로 화면 확인
+  const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+  const useSample = !CONFIG.sheetId || (isLocal && new URLSearchParams(location.search).has("sample"));
 
   function sheetUrl(kind) {
     if (useSample) return `sample/${kind}.csv`;
@@ -210,12 +211,12 @@
     } catch { return null; }
   }
 
-  // 구글 드라이브 공유 링크 → 이미지로 표시 가능한 썸네일 주소
-  function toImageUrl(value) {
+  // 구글 드라이브 공유 링크 → 이미지로 표시 가능한 썸네일 주소 (width: 불러올 가로 크기)
+  function toImageUrl(value, width = 1000) {
     const url = safeUrl(value);
     if (!url) return null;
     const m = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?.*id=)([\w-]{10,})/);
-    return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w1000` : url;
+    return m ? `https://drive.google.com/thumbnail?id=${m[1]}&sz=w${width}` : url;
   }
 
   function el(tag, props = {}, children = []) {
@@ -236,17 +237,13 @@
     // 항목 이름도 띄어쓰기 무시 ("업체 명" = "업체명")
     const infoGet = (name) => (Object.entries(info).find(([k]) => normalizeKey(k) === name) || [])[1] || "";
 
-    // 상단 이름은 로고 이미지로 고정. 업체명은 브라우저 탭 제목에만 반영 (주문방법 페이지는 제목 유지)
-    if (infoGet("업체명") && PAGE === "home") document.title = infoGet("업체명");
+    // 상단 이름은 로고 이미지, 브라우저 탭 제목은 HTML 의 "엄마수산"으로 고정
     if ($("intro")) $("intro").textContent = infoGet("소개");
     if ($("updated")) $("updated").textContent = infoGet("기준일") ? `${infoGet("기준일")} 기준` : "";
 
     // 분류 순서: "냉장, 냉동, 건어물, 젓갈" 처럼 쉼표(또는 / 줄바꿈)로 구분. 분류 이름에 · 이 들어갈 수 있어 · 는 구분자로 쓰지 않음
     const order = infoGet("분류순서").split(/[,，/\n]+/).map((s) => s.trim()).filter(Boolean);
     if (order.length) state.categoryOrder = order;
-
-    // 제철 띠 위 작은 글씨: 안내 탭 "제철 문구"(예: 10~11월 제철). 비우면 이번 달 자동
-    state.seasonLabel = infoGet("제철문구").trim();
 
     // 값이 URL 인 항목은 상단 버튼으로 (카카오톡·약관 링크는 제자리가 따로 있어 제외)
     const actions = $("hero-actions");
@@ -278,10 +275,11 @@
 
     // 이메일 주문·문의: 안내 탭 "주문 이메일"(없으면 "이메일")
     const email = (infoGet("주문이메일") || infoGet("이메일")).trim();
-    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const valid = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/.test(email);
     const subject = PAGE === "order" ? "[엄마수산] 주문" : "[엄마수산] 문의";
     if ($("cs-email")) {
-      $("cs-email").href = valid ? `mailto:${email}?subject=${encodeURIComponent(subject)}` : "";
+      if (valid) $("cs-email").href = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+      else $("cs-email").removeAttribute("href");
       $("cs-email").hidden = !valid;
     }
     if ($("cs-email-text")) {
@@ -313,14 +311,12 @@
     const lookup = new Map(Object.entries(info).map(([k, v]) => [normalizeKey(k), v]));
     const valueOf = (label) => aliasesOf(label).map((k) => lookup.get(k)).find(Boolean) || "";
 
-    // 이용약관·개인정보처리방침: 안내 탭에 문서 주소를 적으면 하단 첫 줄에 링크로 표시
-    // 기본은 사이트 안의 문서(terms.html·privacy.html), 안내 탭에 다른 주소를 적으면 그 주소
-    const LEGAL_PAGES = { 이용약관: "terms.html", 개인정보처리방침: "privacy.html" };
-    const legal = Object.entries(LEGAL_PAGES)
-      .map(([k, file]) => [k, safeUrl(lookup.get(k) || "") || new URL(file, location.href).href]);
-    $("footer-links").replaceChildren(...legal.map(([k, href]) =>
-      el("a", { href, textContent: k, ...(k === "개인정보처리방침" ? { className: "strong" } : {}) })));
-    $("footer-links").hidden = !legal.length;
+    // 이용약관·개인정보처리방침: 하단 링크는 HTML 에 사이트 안 문서로 들어 있음 (안내 탭을 못 읽어도 표시)
+    // 안내 탭에 다른 문서 주소를 적으면 그 주소로 바꿈
+    for (const [key, id] of [["이용약관", "link-terms"], ["개인정보처리방침", "link-privacy"]]) {
+      const href = safeUrl(lookup.get(key) || "");
+      if (href && $(id)) $(id).href = href;
+    }
 
     const lines = FOOTER_LINES.map((labels) => labels.map((l) => [l, valueOf(l)]).filter(([, v]) => v));
     lines.push([...lookup].filter(([k, v]) => v && !FOOTER_SKIP.has(k) && !safeUrl(v)));
@@ -631,6 +627,7 @@
     const find = () => [...document.querySelectorAll("#list .card")].find((c) => c.dataset.name === name);
     if (!find()) {
       state.category = ALL;
+      state.storage = ALL;
       state.query = "";
       $("search").value = "";
       renderChips();
@@ -795,7 +792,8 @@
     if (drawerSt) {
       drawerSt.replaceChildren(...storages.map((s) => {
         const btn = el("button", { type: "button", className: `badge storage ${STORAGE_CLASS[s] || "etc"}`, textContent: s });
-        btn.addEventListener("click", () => selectStorage(s));
+        btn.setAttribute("aria-pressed", String(s === state.storage));
+        btn.addEventListener("click", () => selectStorage(s === state.storage ? ALL : s));   // 다시 누르면 해제
         return btn;
       }));
       $("drawer-storage-group").hidden = !storages.length;
@@ -805,10 +803,13 @@
   function setDrawerOpen(open) {
     const d = $("drawer");
     if (!d) return;
+    if (d.hidden === !open) return;
     d.hidden = !open;
     $("menu-open").setAttribute("aria-expanded", String(open));
     document.documentElement.classList.toggle("drawer-open", open);
-    if (open) $("drawer-close").focus();
+    // 열려 있는 동안 뒤쪽 화면은 키보드·화면낭독기에서 제외
+    for (const node of document.body.children) if (node !== d && node.tagName !== "SCRIPT") node.inert = open;
+    (open ? $("drawer-close") : $("menu-open")).focus();
   }
 
   function initNav() {
@@ -829,7 +830,7 @@
     const slides = rows
       .filter((r) => isVisible(r) && toImageUrl(get(r, "이미지")))
       .map((r) => {
-        const img = el("img", { src: toImageUrl(get(r, "이미지")), alt: get(r, "제목") || "엄마수산 배너", referrerPolicy: "no-referrer", loading: "eager" });
+        const img = el("img", { src: toImageUrl(get(r, "이미지"), 1600), alt: get(r, "제목") || "엄마수산 배너", referrerPolicy: "no-referrer", loading: "eager" });
         const href = safeUrl(get(r, "링크"));
         const slide = href
           ? el("a", { className: "slide", href, target: "_blank", rel: "noopener noreferrer" }, img)
@@ -847,29 +848,44 @@
     const current = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
     const goTo = (k) => track.scrollTo({ left: k * track.clientWidth, behavior: "smooth" });
 
+    // 점: 장 수가 바뀔 때만 새로 만들고, 넘길 때는 표시만 바꿈
     function updateDots() {
       const n = track.children.length;
       dots.hidden = n < 2;
+      if (dots.children.length !== n) {
+        dots.replaceChildren(...[...Array(n)].map((_, k) => {
+          const dot = el("button", { type: "button" });
+          dot.setAttribute("aria-label", `${k + 1}번째 배너`);
+          dot.addEventListener("click", () => { pauseUntil = Date.now() + 8000; goTo(k); });
+          return dot;
+        }));
+      }
       const i = current();
-      dots.replaceChildren(...[...Array(n)].map((_, k) => {
-        const dot = el("button", { type: "button", className: k === i ? "on" : "" });
-        dot.setAttribute("aria-label", `${k + 1}번째 배너`);
-        dot.addEventListener("click", () => { pauseUntil = Date.now() + 8000; goTo(k); });
-        return dot;
-      }));
+      [...dots.children].forEach((dot, k) => {
+        dot.classList.toggle("on", k === i);
+        if (k === i) dot.setAttribute("aria-current", "true"); else dot.removeAttribute("aria-current");
+      });
     }
-    track.addEventListener("scroll", () => requestAnimationFrame(updateDots), { passive: true });
+    let frame = 0;
+    track.addEventListener("scroll", () => {
+      if (!frame) frame = requestAnimationFrame(() => { frame = 0; updateDots(); });
+    }, { passive: true });
     updateDots();
 
     let pauseUntil = 0;
+    let hovering = false;   // 마우스를 올리거나 키보드로 들어와 있는 동안은 자동 넘김 멈춤
     for (const ev of ["pointerdown", "touchstart", "wheel"]) {
       track.addEventListener(ev, () => { pauseUntil = Date.now() + 8000; }, { passive: true });
     }
+    box.addEventListener("mouseenter", () => { hovering = true; });
+    box.addEventListener("mouseleave", () => { hovering = false; });
+    box.addEventListener("focusin", () => { hovering = true; });
+    box.addEventListener("focusout", () => { hovering = false; });
     const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!reduceMotion) {
       setInterval(() => {
         const n = track.children.length;
-        if (n < 2 || document.hidden || Date.now() < pauseUntil) return;
+        if (n < 2 || document.hidden || hovering || Date.now() < pauseUntil) return;
         goTo((current() + 1) % n);
       }, 5000);
     }
@@ -903,7 +919,7 @@
   // 제철 타일: 사진 왼쪽 + 이름·(PC: 원산지·규격·안내)·가격 오른쪽
   function renderTile(item) {
     const soldOut = isSoldOut(item);
-    const imgSrc = toImageUrl(get(item, COL.photo));
+    const imgSrc = toImageUrl(get(item, COL.photo), 400);
     const emptyPhoto = () => el("div", { className: "img-empty", textContent: "준비중" });
     const img = imgSrc
       ? el("img", { src: imgSrc, alt: get(item, COL.name), loading: "lazy", referrerPolicy: "no-referrer" })
@@ -916,8 +932,6 @@
       el("div", { className: "tile-body" }, [
         el("div", { className: "tile-top" }, [
           storageBadge(item),
-          // 휴대폰에서는 공간이 좁아 할인율을 위쪽 작은 표시로 (PC는 가격 줄에 그대로)
-          priceInfo(item).discount ? el("span", { className: "badge tile-off", textContent: priceInfo(item).discount }) : null,
           soldOut ? el("span", { className: "badge warn", textContent: get(item, COL.status) }) : null,
         ]),
         el("h3", { textContent: get(item, COL.name) || "(상품명 없음)" }),
