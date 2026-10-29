@@ -554,37 +554,50 @@ body {
 .notices-page { margin-top: 8px; }
 
 
-/* ===== 첫 화면 섹션 규칙 (시안 A/B 공통) =====
-   1) 모든 섹션 제목 = 남색 머리말 + 큰 제목 + 설명 한 줄
-   2) 섹션 사이 = 모두 같은 회색 구분 띠
+/* ===== 첫 화면 섹션 규칙 =====
+   1) 모든 섹션 제목 = 머리말 + 큰 제목 + 설명 한 줄
+   2) 섹션 사이 = 콘텐츠 폭 안의 얇은 선(1px)
    3) 카드 = 큰 카드(주력상품) / 작은 카드(제철 넘기기·전체 목록) 두 가지
-   4) 강조 = 주력상품 한 곳 (A: 흰 바탕 + 큰 카드·리본 / B: 남색 띠) */
-.home-sec { padding-block: 30px; }
-.home-sec + .home-sec { border-top: 10px solid var(--line); }
-.banner + .home-sec, .wrap:has(> .banner) + .home { margin-top: 0; }
+   4) 강조 = 주력상품 한 곳만, 콘텐츠 폭 안의 둥근 남색 상자 */
+.home-sec { padding-block: 0 28px; }
+.home-sec:first-child { padding-top: 20px; }               /* 배너와 주력상품 사이 여백 */
+/* 구분선은 콘텐츠 폭 안에서만 (화면 끝까지 긋지 않음) */
+.home-sec + .home-sec > .wrap::before { content: ""; display: block; height: 1px; background: var(--line); margin-bottom: 26px; }
+.sec-rec + .home-sec > .wrap::before { display: none; }   /* 남색 상자 다음은 여백만 */
+.sec-rec + .home-sec { padding-top: 4px; }
 
-.section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 16px; }
+.section-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 14px; }
 .section-eyebrow { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .14em; color: var(--brand); }
-.section-head h2 { margin: 2px 0 0; font-size: 22px; letter-spacing: -0.01em; }
+.section-head h2 { margin: 2px 0 0; font-size: 21px; letter-spacing: -0.01em; }
 .section-sub { margin: 2px 0 0; font-size: 14px; color: var(--muted); }
+
+/* 주력상품: 콘텐츠 폭 안의 둥근 남색 상자 */
+.rec-panel { background: var(--brand); color: #fff; border-radius: 18px; padding: 20px 0 16px 18px; overflow: hidden; }
+.rec-panel .section-head { padding-right: 18px; margin-bottom: 12px; }
+.rec-panel .section-eyebrow { color: var(--point); }
+.rec-panel .section-sub { color: rgba(255, 255, 255, .78); }
+.rec-panel .card { color: var(--ink); border: 0; box-shadow: 0 6px 16px rgba(10, 20, 60, .22); }
+.rec-panel .shelf-track { padding-right: 18px; scroll-padding-left: 0; }
 
 /* 가로 넘기기 줄 */
 .shelf-track {
-  display: grid; grid-auto-flow: column; gap: 12px;
-  overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: none;
+  display: grid; grid-auto-flow: column; gap: 10px;
+  overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; scrollbar-width: none;
 }
 .shelf-track::-webkit-scrollbar { display: none; }
 .shelf-track > .card { scroll-snap-align: start; cursor: pointer; }
-.shelf-big { grid-auto-columns: 70%; }
-.shelf-small { grid-auto-columns: 42%; gap: 10px; }
+.shelf-big { grid-auto-columns: 54%; }
+.shelf-small { grid-auto-columns: 42%; }
 @media (min-width: 700px) {
-  .shelf-big { grid-auto-columns: calc((100% - 24px) / 3); }
-  .shelf-small { grid-auto-columns: calc((100% - 30px) / 4); }
+  .shelf-big { grid-auto-columns: calc((100% - 30px) / 4); }
+  .shelf-small { grid-auto-columns: calc((100% - 40px) / 5); }
 }
 .shelf-track .tags { display: none; }          /* 섹션 자체가 추천·제철 표시 */
-.shelf-big .card h3 { font-size: 17px; }
-.shelf-big .price-sale { font-size: 20px; }
-.shelf-big .price-discount { font-size: 18px; }
+.shelf-big .card-body { padding: 10px 12px 12px; }
+.shelf-big .card h3 { font-size: 15px; }
+.shelf-big .price-sale { font-size: 17px; }
+.shelf-big .price-discount { font-size: 15px; }
+
 /* 주력상품 순위 리본 */
 .rank {
   position: absolute; top: 0; right: 12px; width: 34px; height: 44px;
@@ -592,13 +605,6 @@ body {
   display: grid; place-items: center; padding-bottom: 6px;
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
 }
-
-/* 시안 B: 주력상품만 남색 띠 */
-.layout-b .sec-rec { background: var(--brand); color: #fff; }
-.layout-b .sec-rec .section-eyebrow { color: var(--point); }
-.layout-b .sec-rec .section-sub { color: rgba(255, 255, 255, .78); }
-.layout-b .sec-rec .card { color: var(--ink); border: 0; box-shadow: 0 8px 22px rgba(10, 20, 60, .2); }
-.layout-b .sec-rec + .home-sec { border-top: 0; }   /* 남색 띠 바로 다음은 구분 띠 생략 */
 
 /* 고객센터 섹션 */
 .sec-cs .cs { margin-top: 0; }
