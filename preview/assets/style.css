@@ -615,3 +615,9 @@ body {
 .wide-card .price-sale { font-size: 18px; }
 .wide-card.sold-out img, .wide-card.sold-out .img-empty { filter: grayscale(1); opacity: .55; }
 .wide-card.sold-out h3 { color: var(--muted); }
+
+/* 섹션 사이 구분 띠 (화면 전체 폭) + 전체 상품 제목 */
+.section-divider { height: 10px; background: var(--line); margin-top: 28px; }
+.list-head { margin: 28px 0 0; }
+.section-eyebrow.brand { color: var(--brand); }
+.toolbar { padding-top: 12px; }
