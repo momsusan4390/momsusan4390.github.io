@@ -175,6 +175,26 @@
     return btn;
   }
 
+  // 불러오기 실패 문구 + 다시 불러오기 + 원인
+  function showLoadError(box, error) {
+    box.replaceChildren(
+      "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. ",
+      retryButton(),
+      el("small", { className: "status-reason", textContent: `원인: ${describeError(error)}` })
+    );
+  }
+
+  // 사본으로 대신 보여주는 중이면 저장 시각 안내 (사본이 없으면 아무것도 안 함)
+  function showStale(box, results) {
+    const staleAt = Math.min(...results.map((r) => r.staleAt || Infinity));
+    if (!Number.isFinite(staleAt)) return;
+    box.replaceChildren(
+      `인터넷 연결이 불안정해 최신 정보를 불러오지 못했어요. ${formatTime(staleAt)}에 저장된 정보를 보여드려요. `,
+      retryButton()
+    );
+    box.hidden = false;
+  }
+
   // RFC 4180 CSV → 객체 배열 (첫 줄 = 헤더)
   function parseCsv(text) {
     const rows = [];
@@ -1044,23 +1064,12 @@
     if (banners.rows) renderBanners(banners.rows);
 
     if (!items.rows) {
-      $("status").replaceChildren(
-        "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요. ",
-        retryButton(),
-        el("small", { className: "status-reason", textContent: `원인: ${describeError(items.error)}` })
-      );
+      showLoadError($("status"), items.error);
       return;
     }
 
     // 사본으로 대신 보여주는 중이면 안내
-    const staleAt = Math.min(...[items, info].map((r) => r.staleAt || Infinity));
-    if (Number.isFinite(staleAt)) {
-      $("stale").replaceChildren(
-        `인터넷 연결이 불안정해 최신 정보를 불러오지 못했어요. ${formatTime(staleAt)}에 저장된 정보를 보여드려요. `,
-        retryButton()
-      );
-      $("stale").hidden = false;
-    }
+    showStale($("stale"), [items, info]);
 
     state.items = items.rows.filter(isVisible);
     state.items.forEach((item, i) => state.rowIndex.set(item, i));
@@ -1086,14 +1095,17 @@
       .map((r, k) => settle(r, k === 0 ? "order" : "info"));
     if (info.rows) applyInfo(info.rows);
 
-    const rows = (order.rows || []).filter((r) => isVisible(r) && get(r, "제목"));
+    if (!order.rows) {
+      showLoadError($("order-status"), order.error);
+      return;
+    }
+    const rows = order.rows.filter((r) => isVisible(r) && get(r, "제목"));
     if (!rows.length) {
-      $("order-status").textContent = order.rows
-        ? "주문 방법을 준비하고 있어요. 카카오톡으로 문의해 주세요."
-        : "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      $("order-status").textContent = "주문 방법을 준비하고 있어요. 카카오톡으로 문의해 주세요.";
       return;
     }
     $("order-status").textContent = "";
+    showStale($("order-status"), [order, info]);
     const isNote = (r) => normalizeKey(get(r, "구분")) === "안내";
     $("order-steps").replaceChildren(...rows.filter((r) => !isNote(r)).map((r) =>
       el("li", {}, el("div", {}, [el("strong", { textContent: get(r, "제목") }), get(r, "내용") ? el("p", { textContent: get(r, "내용") }) : null]))
@@ -1113,10 +1125,13 @@
     const [notices, info] = (await Promise.allSettled([fetchCsv("notices"), fetchCsv("info")]))
       .map((r, k) => settle(r, k === 0 ? "notices" : "info"));
     if (info.rows) applyInfo(info.rows);
-    const count = notices.rows ? renderNotices(notices.rows, 10) : 0;
-    $("notice-status").textContent = count
-      ? ""
-      : notices.rows ? "등록된 공지가 없습니다." : "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    if (!notices.rows) {
+      showLoadError($("notice-status"), notices.error);
+      return;
+    }
+    const count = renderNotices(notices.rows, 10);
+    $("notice-status").textContent = count ? "" : "등록된 공지가 없습니다.";
+    if (count) showStale($("notice-status"), [notices, info]);
   }
 
   init();

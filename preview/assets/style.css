@@ -194,6 +194,7 @@ body {
 .storage-chips button.live[aria-pressed="true"] { background: var(--live); border-color: var(--live); }
 .storage-chips button.cold[aria-pressed="true"] { background: var(--cold); border-color: var(--cold); }
 .storage-chips button.frozen[aria-pressed="true"] { background: var(--frozen); border-color: var(--frozen); }
+.storage-chips button.room[aria-pressed="true"] { background: var(--room); border-color: var(--room); }
 .storage-chips button[aria-pressed="true"] { border-style: solid; }
 
 .status { color: var(--muted); }
@@ -485,7 +486,7 @@ body {
 .banner img { width: 100%; aspect-ratio: 5 / 2; object-fit: cover; background: var(--soft); display: block; }
 .banner-dots { display: flex; justify-content: center; margin-top: 2px; }
 /* 누르는 영역은 24px, 보이는 점은 그 안의 작은 점 */
-.banner-dots button { border: 0; padding: 0; background: none; cursor: pointer; height: 24px; min-width: 19px; display: grid; place-items: center; }
+.banner-dots button { border: 0; padding: 0; background: none; cursor: pointer; height: 24px; min-width: 24px; display: grid; place-items: center; }
 .banner-dots button::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: width .2s; }
 .banner-dots button.on::before { background: var(--brand); width: 18px; border-radius: 4px; }
 
