@@ -35,7 +35,14 @@ body {
 
 /* ---------- 상단 헤더 ---------- */
 .site-header { background: var(--bg); padding-top: env(safe-area-inset-top, 0px); }
-.header-row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding-block: 10px 6px; }
+.header-row { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding-block: 10px 10px; row-gap: 8px; }
+.search-box {
+  grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+  border: 1.5px solid var(--brand); border-radius: 999px; padding: 0 14px; height: 44px; background: #fff;
+}
+.search-box svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--brand); stroke-width: 2; stroke-linecap: round; }
+.search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 15px; height: 100%; }
+.search-box:focus-within { box-shadow: 0 0 0 3px var(--brand-soft); }
 .site-header .logo { justify-self: center; width: 72px; line-height: 0; }
 .site-header .logo img { display: block; width: 100%; height: auto; }
 .icon-btn {
@@ -58,8 +65,10 @@ body {
 .gnb-links a { color: var(--muted); font-weight: 500; }
 @media (min-width: 820px) {
   .gnb { display: block; }
-  .menu-btn { visibility: hidden; }
-  .site-header .logo { width: 88px; }
+  .header-row { grid-template-columns: 1fr auto 1fr; }
+  .menu-btn, .header-row .spacer { display: none; }
+  .site-header .logo { width: 88px; grid-column: 2; }
+  .search-box { grid-column: 3; justify-self: end; width: min(320px, 100%); }
 }
 
 .hero-meta { text-align: center; }
@@ -124,15 +133,8 @@ body {
   background: var(--bg);
   padding-block: 16px 8px;
 }
-#search {
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: #fff;
-  font: inherit;
-}
-.chips { display: flex; gap: 6px; overflow-x: auto; margin-top: 10px; padding-bottom: 4px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+.chips + .chips { margin-top: 6px; }
 .list-controls { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
 .count { color: var(--muted); font-size: 13px; }
 .controls { display: flex; align-items: center; gap: 6px; }
@@ -475,18 +477,39 @@ body {
 .banner-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
 .banner-dots span.on { background: var(--brand); width: 16px; border-radius: 3px; }
 
-/* ---------- 이달의 주력상품 · 제철 상품 ---------- */
-.shelf { margin-top: 28px; }
-.shelf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
-.shelf-head h2 { margin: 0; font-size: 18px; }
-.shelf-head span { color: var(--muted); font-size: 12px; }
+/* ---------- 이달의 주력상품 · 제철 상품 (전체 폭 색 띠, 일반 목록과 확실히 다르게) ---------- */
+.band { margin-top: 28px; padding-block: 26px 30px; }
+.band + .band { margin-top: 0; }
+.band-rec { background: var(--brand); color: #fff; }
+.band-season { background: #e3f1ee; }
+.shelf-head { display: grid; gap: 2px; margin-bottom: 16px; }
+.band-eyebrow { margin: 0; font-size: 12px; font-weight: 800; letter-spacing: .14em; }
+.band-rec .band-eyebrow { color: #fee500; }
+.band-season .band-eyebrow { color: var(--live); }
+.shelf-head h2 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+.band-sub { margin: 0; font-size: 14px; }
+.band-rec .band-sub { color: rgba(255, 255, 255, .78); }
+.band-season .band-sub { color: var(--muted); }
 .shelf-track {
-  display: grid; grid-auto-flow: column; grid-auto-columns: 42%; gap: 10px;
-  overflow-x: auto; scroll-snap-type: x proximity; padding-bottom: 6px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 62%; gap: 12px;
+  overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 8px;
+  scrollbar-width: none;
 }
-.shelf-track > .card { scroll-snap-align: start; cursor: pointer; }
-@media (min-width: 700px) { .shelf-track { grid-auto-columns: calc((100% - 30px) / 4); } }
-@media (min-width: 700px) { .shelf-head span { display: none; } }
+.shelf-track::-webkit-scrollbar { display: none; }
+@media (min-width: 700px) { .shelf-track { grid-auto-columns: calc((100% - 24px) / 3); } }
+.band .card { color: var(--ink); border: 0; box-shadow: 0 8px 22px rgba(10, 20, 60, .18); scroll-snap-align: start; cursor: pointer; }
+.band .tags { display: none; }               /* 띠 자체가 추천·제철 표시 */
+.band.view-grid .card-body { padding: 12px 14px 14px; }
+.band.view-grid .card h3 { font-size: 16px; }
+.band.view-grid .price-sale { font-size: 19px; }
+.band.view-grid .price-discount { font-size: 17px; }
+/* 주력상품 순위 리본 */
+.rank {
+  position: absolute; top: 0; right: 12px; width: 34px; height: 44px;
+  background: #fee500; color: #191919; font-weight: 800; font-size: 18px;
+  display: grid; place-items: center; padding-bottom: 6px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
+}
 
 /* ---------- 고객센터 안내 ---------- */
 .cs { margin-top: 36px; padding: 18px 20px; border-radius: var(--radius); background: var(--soft); display: grid; gap: 6px; }
@@ -549,3 +572,6 @@ body {
 .order-note { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); }
 .order-note h3 { margin: 0 0 4px; font-size: 15px; }
 .order-note p { margin: 0; color: var(--muted); font-size: 14px; white-space: pre-line; }
+
+/* ---------- 공지사항 페이지 ---------- */
+.notices-page { margin-top: 8px; }

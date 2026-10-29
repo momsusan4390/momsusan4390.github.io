@@ -13,7 +13,7 @@
   <meta property="og:title" content="엄마수산">
   <meta property="og:description" content="엄마수산 상품 안내 — 산지에서 바로 받은 수산물">
   <meta property="og:image" content="https://momsusan4390.github.io/assets/img/logo.png">
-  <link rel="stylesheet" href="assets/style.css?v=1">
+  <link rel="stylesheet" href="assets/style.css?v=2">
 </head>
 <body data-page="home">
   <header class="site-header">
@@ -22,14 +22,16 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       </button>
       <a class="logo" href="./" aria-label="엄마수산 처음으로"><img src="../assets/img/logo.png" alt="엄마수산" width="800" height="800"></a>
-      <button type="button" class="icon-btn" id="search-jump" aria-label="상품 검색">
+      <span class="icon-btn spacer" aria-hidden="true"></span>
+      <form class="search-box" id="search-form" role="search">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
-      </button>
+        <input type="search" id="search" placeholder="상품명, 원산지 검색" aria-label="상품명, 원산지 검색" autocomplete="off">
+      </form>
     </div>
     <nav class="gnb" aria-label="주요 메뉴">
       <div class="wrap gnb-row">
         <div class="gnb-cats" id="gnb-cats"></div>
-        <div class="gnb-links"><a href="#notices">공지사항</a><a href="order.html">주문방법</a></div>
+        <div class="gnb-links"><a href="notices.html">공지사항</a><a href="order.html">주문방법</a></div>
       </div>
     </nav>
     <div class="wrap hero-meta">
@@ -39,30 +41,38 @@
     </div>
   </header>
 
-  <main class="wrap">
+  <div class="wrap">
     <section class="banner" id="banner" aria-label="안내 배너" hidden>
       <div class="banner-track" id="banner-track"></div>
       <div class="banner-dots" id="banner-dots" aria-hidden="true"></div>
     </section>
+  </div>
 
-    <section class="shelf view-grid" id="shelf-rec" aria-labelledby="rec-h" hidden>
-      <div class="shelf-head"><h2 id="rec-h">이달의 주력상품</h2><span>옆으로 넘겨 보세요 →</span></div>
+  <section class="band band-rec view-grid" id="shelf-rec" aria-labelledby="rec-h" hidden>
+    <div class="wrap">
+      <div class="shelf-head">
+        <p class="band-eyebrow">MOM'S PICK</p>
+        <h2 id="rec-h">이달의 주력상품</h2>
+        <p class="band-sub">엄마수산이 이번 달 가장 자신 있게 권하는 상품</p>
+      </div>
       <div class="shelf-track"></div>
-    </section>
+    </div>
+  </section>
 
-    <section class="shelf view-grid" id="shelf-season" aria-labelledby="season-h" hidden>
-      <div class="shelf-head"><h2 id="season-h">제철 상품</h2><span>옆으로 넘겨 보세요 →</span></div>
+  <section class="band band-season view-grid" id="shelf-season" aria-labelledby="season-h" hidden>
+    <div class="wrap">
+      <div class="shelf-head">
+        <p class="band-eyebrow" id="season-month">제철</p>
+        <h2 id="season-h">지금이 제철</h2>
+        <p class="band-sub">지금 가장 맛이 오른 수산물</p>
+      </div>
       <div class="shelf-track"></div>
-    </section>
+    </div>
+  </section>
 
-    <section class="notices" id="notices" hidden>
-      <h2>공지사항</h2>
-      <ul id="notice-list"></ul>
-      <button type="button" class="notice-more" id="notice-more" hidden></button>
-    </section>
+  <main class="wrap">
 
     <div class="toolbar">
-      <input type="search" id="search" placeholder="상품명·원산지 검색" aria-label="상품 검색">
       <div class="chips" id="chips" role="group" aria-label="상품 분류"></div>
       <div class="chips storage-chips" id="storage-chips" role="group" aria-label="보관 방식" hidden></div>
       <div class="list-controls">
@@ -125,7 +135,7 @@
       </div>
       <p class="drawer-label">안내</p>
       <ul class="drawer-list">
-        <li><a href="#notices">공지사항</a></li>
+        <li><a href="notices.html">공지사항</a></li>
         <li><a href="order.html">주문방법</a></li>
         <li><a id="drawer-kakao" target="_blank" rel="noopener noreferrer" hidden>카카오톡 문의</a></li>
       </ul>
@@ -164,7 +174,7 @@
     </button>
   </div>
 
-  <script src="config.js?v=1"></script>
-  <script src="assets/app.js?v=1"></script>
+  <script src="config.js?v=2"></script>
+  <script src="assets/app.js?v=2"></script>
 </body>
 </html>

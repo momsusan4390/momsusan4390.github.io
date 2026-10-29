@@ -51,7 +51,7 @@
     items: [], category: ALL, storage: ALL, query: "", sort: "name", view: loadView(),
     rowIndex: new Map(), categoryOrder: CATEGORY_ORDER, kakaoUrl: "",
   };
-  const PAGE = document.body.dataset.page || "home"; // home | order
+  const PAGE = document.body.dataset.page || "home"; // home | order | notices
 
   const normalizeKey = (key) => key.replace(/\s+/g, "");
   const isSpecial = (key) => SPECIAL_KEYS.has(normalizeKey(key));
@@ -336,7 +336,7 @@
     return m ? Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]) : 0;
   }
 
-  function renderNotices(rows) {
+  function renderNotices(rows, preview = NOTICE_PREVIEW) {
     const notices = rows
       .filter((r) => isVisible(r) && (get(r, "제목") || get(r, "내용")))
       .map((r, index) => ({ r, index }))
@@ -346,7 +346,7 @@
         a.index - b.index
       )
       .map(({ r }) => r);
-    if (!notices.length) return;
+    if (!notices.length) return 0;
 
     const items = notices.map((r, i) => {
       const href = safeUrl(get(r, "링크"));
@@ -360,21 +360,22 @@
         href ? externalLink("자세히 보기", href) : null,
       ]);
       // 숨김은 li 에 걸어야 구분선(li + li 테두리)이 겹치지 않는다
-      return el("li", { hidden: i >= NOTICE_PREVIEW }, el("details", { open: i === 0 }, [summary, body]));
+      return el("li", { hidden: i >= preview }, el("details", { open: i === 0 }, [summary, body]));
     });
 
     $("notice-list").replaceChildren(...items);
     $("notices").hidden = false;
 
     const more = $("notice-more");
-    if (notices.length > NOTICE_PREVIEW) {
-      more.textContent = `이전 공지 ${notices.length - NOTICE_PREVIEW}건 더보기`;
+    if (notices.length > preview) {
+      more.textContent = `이전 공지 ${notices.length - preview}건 더보기`;
       more.hidden = false;
       more.addEventListener("click", () => {
         items.forEach((li) => { li.hidden = false; });
         more.hidden = true;
       }, { once: true });
     }
+    return notices.length;
   }
 
   // ---------- 상품 시트 ----------
@@ -796,12 +797,8 @@
     $("drawer-close").addEventListener("click", () => setDrawerOpen(false));
     $("drawer").addEventListener("click", (e) => { if (e.target === $("drawer")) setDrawerOpen(false); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("drawer").hidden) setDrawerOpen(false); });
-    // 공지사항 바로가기: 메뉴 닫고 공지 상자로
-    for (const a of document.querySelectorAll('a[href="#notices"]')) {
-      a.addEventListener("click", () => setDrawerOpen(false));
-    }
-    const jump = $("search-jump");
-    if (jump) jump.addEventListener("click", () => { scrollToList(); setTimeout(() => $("search").focus({ preventScroll: true }), 350); });
+    const form = $("search-form");
+    if (form) form.addEventListener("submit", (e) => { e.preventDefault(); $("search").blur(); scrollToList(); });
   }
 
   // ---------- 배너 (배너 탭: 이미지 | 링크 | 제목 | 노출) ----------
@@ -846,8 +843,14 @@
       const items = state.items.filter((i) => isYes(get(i, col)))
         .sort(withSoldOutLast((a, b) => state.rowIndex.get(a) - state.rowIndex.get(b)));
       box.hidden = !items.length;
-      box.querySelector(".shelf-track").replaceChildren(...items.map((i) => renderCard(i, { compact: true })));
+      box.querySelector(".shelf-track").replaceChildren(...items.map((item, k) => {
+        const card = renderCard(item, { compact: true });
+        if (col === COL.rec) card.querySelector(".photo").append(el("span", { className: "rank", textContent: String(k + 1) }));
+        return card;
+      }));
     };
+    const m = $("season-month");
+    if (m) m.textContent = `${new Date().getMonth() + 1}월 제철`;
     shelf("shelf-rec", COL.rec);
     shelf("shelf-season", COL.season);
   }
@@ -917,6 +920,7 @@
     initFab();
     setKakao(CONFIG.kakaoUrl);
     if (PAGE === "order") return initOrderPage();
+    if (PAGE === "notices") return initNoticesPage();
 
     $("search").addEventListener("input", (e) => { state.query = e.target.value.trim(); renderList(); });
     $("sort").addEventListener("change", (e) => { state.sort = e.target.value; renderList(); });
@@ -927,24 +931,21 @@
     setView(state.view);
     initDetail();
 
-    // 공지사항·안내·배너 탭은 없어도 상품은 표시된다
+    // 안내·배너 탭은 없어도 상품은 표시된다 (공지는 공지사항 페이지에서)
     const onItemsRetry = (n) => { $("status").textContent = `연결이 원활하지 않아 다시 시도하는 중… (${n}/${FETCH_RETRIES})`; };
     const results = await Promise.allSettled([
       fetchCsv("items", onItemsRetry),
-      fetchCsv("notices"),
       fetchCsv("info"),
       fetchCsv("banners"),
     ]);
-    const [items, notices, info, banners] = [
+    const [items, info, banners] = [
       settle(results[0], "items"),
-      settle(results[1], "notices"),
-      settle(results[2], "info"),
-      settle(results[3], "banners"),
+      settle(results[1], "info"),
+      settle(results[2], "banners"),
     ];
-    for (const r of [items, notices, info, banners]) if (r.error) console.warn(r.error);
+    for (const r of [items, info, banners]) if (r.error) console.warn(r.error);
 
     if (info.rows) applyInfo(info.rows);
-    if (notices.rows) renderNotices(notices.rows);
     if (banners.rows) renderBanners(banners.rows);
 
     if (!items.rows) {
@@ -957,7 +958,7 @@
     }
 
     // 사본으로 대신 보여주는 중이면 안내
-    const staleAt = Math.min(...[items, notices, info].map((r) => r.staleAt || Infinity));
+    const staleAt = Math.min(...[items, info].map((r) => r.staleAt || Infinity));
     if (Number.isFinite(staleAt)) {
       $("stale").replaceChildren(
         `인터넷 연결이 불안정해 최신 정보를 불러오지 못했어요. ${formatTime(staleAt)}에 저장된 정보를 보여드려요. `,
@@ -1005,6 +1006,16 @@
     $("order-notes").replaceChildren(...rows.filter(isNote).map((r) =>
       el("div", { className: "order-note" }, [el("h3", { textContent: get(r, "제목") }), el("p", { textContent: get(r, "내용") })])
     ));
+  }
+
+  async function initNoticesPage() {
+    const [notices, info] = (await Promise.allSettled([fetchCsv("notices"), fetchCsv("info")]))
+      .map((r, k) => settle(r, k === 0 ? "notices" : "info"));
+    if (info.rows) applyInfo(info.rows);
+    const count = notices.rows ? renderNotices(notices.rows, 10) : 0;
+    $("notice-status").textContent = count
+      ? ""
+      : notices.rows ? "등록된 공지가 없습니다." : "정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
   }
 
   init();
