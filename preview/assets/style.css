@@ -604,41 +604,29 @@ body {
   .shelf-big[data-count="1"] { grid-template-columns: 1fr 1fr; }
 }
 
-/* 지금이 제철: 가로형 타일 2열 (세로형 카드와 모양으로 구분)
-   휴대폰 = 작은 사진 + 이름 + 가격 / PC = 큰 사진 + 원산지·규격·안내 한 줄까지 */
-.season-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+/* 지금이 제철: 가로형 타일 (사진 왼쪽 + 정보 오른쪽) — 휴대폰 1열, PC 2열 */
+.season-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 700px) { .season-grid { grid-template-columns: 1fr 1fr; gap: 12px; } }
 .tile {
-  display: grid; grid-template-columns: 64px 1fr; gap: 10px; align-items: center;
-  padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; min-width: 0;
+  display: grid; grid-template-columns: 104px 1fr; gap: 14px; align-items: start;
+  padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); cursor: pointer; min-width: 0;
 }
-.tile .photo { border-radius: 8px; overflow: hidden; line-height: 0; }
-@media (max-width: 380px) { .tile { grid-template-columns: 54px 1fr; gap: 8px; } }   /* 좁은 휴대폰: 글자 자리 확보 */
+@media (min-width: 700px) { .tile { grid-template-columns: 120px 1fr; gap: 16px; padding: 12px; } }
+.tile .photo { border-radius: 10px; overflow: hidden; line-height: 0; }
 .tile img, .tile .img-empty { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; display: block; background: var(--soft); }
-.tile .img-empty { display: grid; place-items: center; color: var(--muted); font-size: 11px; line-height: 1.2; }
-.tile-body { display: grid; gap: 2px; min-width: 0; }
+.tile .img-empty { display: grid; place-items: center; color: var(--muted); font-size: 12px; line-height: 1.2; }
+.tile-body { display: grid; gap: 3px; min-width: 0; }
 .tile-top { display: flex; gap: 4px; flex-wrap: wrap; }
-.tile-top .badge { font-size: 10px; padding: 1px 5px; box-shadow: none; }
-.tile h3 { margin: 0; font-size: 14px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: keep-all; overflow-wrap: anywhere; }
-.tile-meta, .tile-desc { display: none; margin: 0; font-size: 13px; }
-.tile-meta { color: var(--muted); }
-.tile .price-original { display: none; }
-.tile .price-now { gap: 3px; flex-wrap: nowrap; white-space: nowrap; letter-spacing: -0.02em; }
-.tile .price-discount { display: none; }          /* 휴대폰: 할인율은 위쪽 작은 표시로 */
-.tile .price-sale { font-size: 14px; }
-.badge.tile-off { background: #fff; color: var(--sale); border: 1px solid var(--sale); }
+.tile-top .badge { font-size: 11px; padding: 2px 6px; box-shadow: none; }
+.badge.tile-off { display: none; }               /* 할인율은 가격 줄에 표시 */
+.tile h3 { margin: 0; font-size: 16px; line-height: 1.35; }
+.tile-meta { margin: 0; font-size: 13px; color: var(--muted); }
+.tile-desc { margin: 0; font-size: 13px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.tile .price-now { gap: 4px; }
+.tile .price-discount { font-size: 15px; }
+.tile .price-sale { font-size: 17px; }
 .tile.sold-out img, .tile.sold-out .img-empty { filter: grayscale(1); opacity: .55; }
 .tile.sold-out h3, .tile.sold-out .price-sale { color: var(--muted); }
-@media (min-width: 700px) {
-  .season-grid { gap: 12px; }
-  .tile { grid-template-columns: 120px 1fr; gap: 16px; padding: 12px; align-items: start; }
-  .tile h3 { font-size: 16px; white-space: normal; }
-  .tile-meta { display: block; }
-  .tile-desc { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-  .tile .price-original { display: block; }
-  .tile .price-discount { display: inline; font-size: 15px; }
-  .badge.tile-off { display: none; }
-  .tile .price-sale { font-size: 18px; }
-}
 .shelf-track .tags { display: none; }          /* 섹션 자체가 추천·제철 표시 */
 .shelf-big .card-body { padding: 10px 12px 12px; }
 .shelf-big .card h3 { font-size: 15px; }
