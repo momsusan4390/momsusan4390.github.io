@@ -3,7 +3,7 @@
 window.APP_CONFIG = {
   // 구글 시트 주소 https://docs.google.com/spreadsheets/d/{여기}/edit 의 {여기} 부분
   // 비워두면 sample/ 폴더의 샘플 데이터로 표시된다.
-  sheetId: "", // 미리보기: 실제 시트 데이터에 새 칸을 채운 sample/*.csv 사용
+  sheetId: "1X5wlopp_zM3hNaz-lDQnemuX-KgMqZg3LXxQbwVTU6c", // 새 사이트 전용 시트 (기존 사이트는 루트 config.js 의 기존 시트)
 
   // 시트 하단 탭 이름
   itemsSheet: "상품게시",
