@@ -28,7 +28,7 @@
   /* 상태 */
   --warn: #a14a17;   --warn-soft: #fbeee4;    /* 품절·중요·당일출고 */
   /* 외부 서비스 (카카오 버튼 전용 — 다른 곳에 쓰지 않음) */
-  --kakao: var(--kakao);  --kakao-ink: var(--kakao-ink);
+  --kakao: #fee500;  --kakao-ink: #191919;
   --radius: 14px;
 }
 
