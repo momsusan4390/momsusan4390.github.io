@@ -1166,7 +1166,8 @@
         dlg.showModal();
         document.documentElement.classList.add("modal-open");
       }
-      $("popup-close").focus();
+      // 포커스는 팝업 전체에 (버튼에 주면 손가락으로 누르지 않아도 포커스 테두리가 보임). Tab 을 누르면 버튼으로 이동
+      dlg.focus();
     }
 
     $("popup-close").addEventListener("click", next);

@@ -438,6 +438,7 @@ body {
 }
 .popup[open] { display: flex; flex-direction: column; }
 .popup::backdrop { background: rgba(0, 0, 0, .5); }
+.popup:focus { outline: none; }
 .popup-content { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .popup-body { display: block; color: inherit; text-decoration: none; }
 .popup-body img { display: block; width: 100%; height: auto; background: var(--soft); }
