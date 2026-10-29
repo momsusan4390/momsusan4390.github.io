@@ -270,6 +270,19 @@
     $("cs-phone").textContent = phone ? `전화 ${phone}` : "";
     $("cs-hours").hidden = !hours;
     $("cs-phone").hidden = !phone;
+
+    // 이메일 주문·문의: 안내 탭 "주문 이메일"(없으면 "이메일")
+    const email = (infoGet("주문이메일") || infoGet("이메일")).trim();
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const subject = PAGE === "order" ? "[엄마수산] 주문" : "[엄마수산] 문의";
+    if ($("cs-email")) {
+      $("cs-email").href = valid ? `mailto:${email}?subject=${encodeURIComponent(subject)}` : "";
+      $("cs-email").hidden = !valid;
+    }
+    if ($("cs-email-text")) {
+      $("cs-email-text").textContent = valid ? `이메일 ${email}` : "";
+      $("cs-email-text").hidden = !valid;
+    }
   }
 
   // ---------- 하단 (안내 탭 기반) ----------
@@ -824,14 +837,35 @@
     track.replaceChildren(...slides);
     box.hidden = false;
 
+    const current = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+    const goTo = (k) => track.scrollTo({ left: k * track.clientWidth, behavior: "smooth" });
+
     function updateDots() {
       const n = track.children.length;
       dots.hidden = n < 2;
-      const i = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
-      dots.replaceChildren(...[...Array(n)].map((_, k) => el("span", { className: k === i ? "on" : "" })));
+      const i = current();
+      dots.replaceChildren(...[...Array(n)].map((_, k) => {
+        const dot = el("button", { type: "button", className: k === i ? "on" : "" });
+        dot.setAttribute("aria-label", `${k + 1}번째 배너`);
+        dot.addEventListener("click", () => { pauseUntil = Date.now() + 8000; goTo(k); });
+        return dot;
+      }));
     }
     track.addEventListener("scroll", () => requestAnimationFrame(updateDots), { passive: true });
     updateDots();
+
+    let pauseUntil = 0;
+    for (const ev of ["pointerdown", "touchstart", "wheel"]) {
+      track.addEventListener(ev, () => { pauseUntil = Date.now() + 8000; }, { passive: true });
+    }
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion) {
+      setInterval(() => {
+        const n = track.children.length;
+        if (n < 2 || document.hidden || Date.now() < pauseUntil) return;
+        goTo((current() + 1) % n);
+      }, 5000);
+    }
   }
 
   // ---------- 이달의 주력상품 · 제철 상품 ----------

@@ -474,8 +474,9 @@ body {
 /* 배너 이미지 권장: 1500×600 (5:2), 글자는 가운데 쪽에 */
 .banner img { width: 100%; aspect-ratio: 5 / 2; object-fit: cover; background: var(--soft); display: block; }
 .banner-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
-.banner-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
-.banner-dots span.on { background: var(--brand); width: 16px; border-radius: 3px; }
+.banner-dots button { border: 0; padding: 0; cursor: pointer; }
+.banner-dots button { width: 7px; height: 7px; border-radius: 50%; background: var(--line); transition: width .2s; }
+.banner-dots button.on { background: var(--brand); width: 18px; border-radius: 4px; }
 
 /* ---------- 이달의 주력상품 · 제철 상품 (전체 폭 색 띠, 일반 목록과 확실히 다르게) ---------- */
 .band { margin-top: 28px; padding-block: 26px 30px; }
