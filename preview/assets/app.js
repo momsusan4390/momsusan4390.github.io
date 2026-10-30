@@ -379,6 +379,8 @@
     ["개인정보보호책임자", "호스팅 제공자"],
   ];
   const FOOTER_ALIASES = { 상호명: ["상호명", "업체명"], 고객센터: ["고객센터", "연락처"] };
+  // 법정 표시 항목은 시트가 비어 있거나 못 읽어도 나오게 기본값을 둔다 (시트에 적으면 시트 값 우선)
+  const FOOTER_DEFAULTS = { 통신판매업신고번호: "2024-충남서천-0080" };
   const aliasesOf = (label) => FOOTER_ALIASES[normalizeKey(label)] || [normalizeKey(label)];
   // 고정 줄에서 쓰는 키(별칭 포함) + 상단·문의 버튼·화면 설정용 키는 추가 항목에서 제외
   const FOOTER_SKIP = new Set([
@@ -388,7 +390,8 @@
 
   function renderFooter(info) {
     const lookup = new Map(Object.entries(info).map(([k, v]) => [normalizeKey(k), v]));
-    const valueOf = (label) => aliasesOf(label).map((k) => lookup.get(k)).find(Boolean) || "";
+    const valueOf = (label) =>
+      aliasesOf(label).map((k) => lookup.get(k)).find(Boolean) || FOOTER_DEFAULTS[normalizeKey(label)] || "";
 
     // 이용약관·개인정보처리방침: 하단 링크는 HTML 에 사이트 안 문서로 들어 있음 (안내 탭을 못 읽어도 표시)
     // 안내 탭에 다른 문서 주소를 적으면 그 주소로 바꿈

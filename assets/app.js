@@ -246,20 +246,23 @@
   const FOOTER_LINES = [
     ["상호명", "대표자"],
     ["주소"],
-    ["사업자등록번호", "고객센터", "이메일"],
+    ["사업자등록번호", "통신판매업 신고번호", "고객센터", "이메일"],
     ["영업시간"],
   ];
   const FOOTER_ALIASES = { 상호명: ["상호명", "업체명"], 고객센터: ["고객센터", "연락처"] };
+  // 법정 표시 항목은 시트가 비어 있거나 못 읽어도 나오게 기본값을 둔다 (시트에 적으면 시트 값 우선)
+  const FOOTER_DEFAULTS = { 통신판매업신고번호: "2024-충남서천-0080" };
   // 고정 줄에서 쓰는 키(별칭 포함) + 상단·문의 버튼용 키는 추가 항목에서 제외
   const FOOTER_SKIP = new Set([
     "소개", "기준일", "카카오톡", "분류순서",
-    ...FOOTER_LINES.flat().flatMap((l) => FOOTER_ALIASES[l] || [l]),
+    ...FOOTER_LINES.flat().flatMap((l) => FOOTER_ALIASES[l] || [normalizeKey(l)]),
   ]);
 
   function renderFooter(info) {
     const lookup = new Map(Object.entries(info).map(([k, v]) => [normalizeKey(k), v]));
     const valueOf = (label) =>
-      (FOOTER_ALIASES[label] || [label]).map((k) => lookup.get(k)).find(Boolean) || "";
+      (FOOTER_ALIASES[label] || [normalizeKey(label)]).map((k) => lookup.get(k)).find(Boolean) ||
+      FOOTER_DEFAULTS[normalizeKey(label)] || "";
 
     const lines = FOOTER_LINES.map((labels) => labels.map((l) => [l, valueOf(l)]).filter(([, v]) => v));
     lines.push([...lookup].filter(([k, v]) => v && !FOOTER_SKIP.has(k) && !safeUrl(v)));
